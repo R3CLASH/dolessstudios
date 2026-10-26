@@ -60,12 +60,8 @@ Everything respects `prefers-reduced-motion` (animations off, final states shown
 
 Search the code for `[` to find placeholders:
 
-- `SITE.email` and `SITE.socials` in `src/lib/content.ts` (empty for now, so they are hidden in the footer, menu, contact page and ⌘K)
-- Project years and the Aito Auto status (`PROJECTS`)
-- Reply time on the contact success screen (`[two working days]`)
-- Optional starting price in the FAQ
-- Budget ranges in `src/components/contact/BriefForm.tsx` are examples
-- Project covers are illustrated SVGs (`ProjectCover.tsx`); swap in real screenshots with `next/image` when you have them
+- Project years (`PROJECTS` in `src/lib/content.ts`)
+- `SITE.socials` in `src/lib/content.ts` (empty for now, so they are hidden in the footer, menu, contact page and ⌘K)
 
 ## Deploying to AWS
 

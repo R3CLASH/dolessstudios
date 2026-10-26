@@ -117,7 +117,7 @@ export function BriefForm() {
           Done. <span className="light">Now relax.</span>
         </h2>
         <p data-done-text className="max-w-xl text-lg text-paper/75">
-          {state.message} We&apos;ll read it properly and reply within [two working days], usually with a few questions and a rough idea of how
+          {state.message} We&apos;ll read it properly and reply within a few hours, usually with a few questions and a rough idea of how
           we&apos;d build it.
         </p>
       </div>

@@ -9,8 +9,8 @@ export const SITE = {
   tagline: "We automate. You do less.",
   description:
     "Do Less Studios designs and builds websites, Shopify and WordPress, web apps, and automations that take the repetitive work off your plate.",
-  /** Public contact email. Left empty for now: the footer, menu, contact page and ⌘K action hide it until it's set. */
-  email: "",
+  /** Public contact email, shown in the footer, menu, contact page and ⌘K. Empty hides it everywhere. */
+  email: "thavisha@dolessstudios.com",
   location: "Sri Lanka",
   timezone: "Asia/Colombo",
   // `||`, not `??`: the first AWS deploy builds with it set but empty (deploy.yml).
@@ -219,7 +219,7 @@ export const PROJECTS: Project[] = [
     title: "Checklist",
     kind: "Platform · Website",
     tags: ["web"],
-    year: "[Year]",
+    year: "2025",
     summary: "One platform to find trusted vendors and plan anything, from a dinner out to a wedding.",
     boringPart:
       "Planning a wedding, a trip or a renovation means a dozen vendors, a dozen WhatsApp threads and a spreadsheet nobody keeps up to date.",
@@ -230,7 +230,7 @@ export const PROJECTS: Project[] = [
       "A vendor side where businesses run their listings, deals and bookings end to end",
     ],
     stack: ["Next.js", "React", "PostgreSQL", "DynamoDB", "Amazon S3", "NextAuth", "GSAP"],
-    status: "[Status]",
+    status: "Active / pre-release",
     accent: "#C9A15B",
     image: "/work/checklist.webp",
     highlights: ["Verified vendors", "Project planning", "Quotes & bookings"],
@@ -241,7 +241,7 @@ export const PROJECTS: Project[] = [
     title: "ThemeMerge",
     kind: "Shopify app",
     tags: ["shopify", "automation"],
-    year: "[Year]",
+    year: "2026",
     summary: "Merge two Shopify themes and keep every edit, instead of redoing changes by hand.",
     boringPart:
       "A developer works on a theme copy while the client keeps editing the live theme. At launch, someone has to find and redo every change twice.",
@@ -252,7 +252,7 @@ export const PROJECTS: Project[] = [
       "Apply the result straight to the working copy, or download the merged files",
     ],
     stack: ["Shopify Admin API", "Liquid", "React Router", "Polaris", "Node.js"],
-    status: "Coming to the Shopify App Store",
+    status: "Shipped",
     accent: "#FF7A1A",
     image: "/work/thememerge.webp",
     highlights: ["Three-way merge", "Theme-editor aware", "Apply or download"],
@@ -262,7 +262,7 @@ export const PROJECTS: Project[] = [
     title: "Deconflict",
     kind: "Shopify app",
     tags: ["shopify"],
-    year: "[Year]",
+    year: "2026",
     summary: "Finds the apps fighting over your storefront, and what each fight costs in load time.",
     boringPart:
       "Every app adds its own scripts. Over time a store loads jQuery three times, opens two cart drawers on add-to-cart and fires the same pixel twice, and nobody can say which app is to blame.",
@@ -273,7 +273,7 @@ export const PROJECTS: Project[] = [
       "Detection of leftover code from apps that were removed months ago",
     ],
     stack: ["Shopify Admin API", "Polaris", "React Router", "Playwright", "Node.js"],
-    status: "[Status]",
+    status: "Shipped",
     accent: "#3D6BF5",
     image: "/work/deconflict.webp",
     highlights: ["Storefront health score", "Duplicate scripts", "Heaviest apps"],
@@ -283,7 +283,7 @@ export const PROJECTS: Project[] = [
     title: "Scopewatch",
     kind: "Shopify app",
     tags: ["shopify", "automation"],
-    year: "[Year]",
+    year: "2026",
     summary: "App and access security for Shopify stores: who can touch your data, and who still should.",
     boringPart:
       "Stores pile up apps, staff and agency collaborators. Months later, an unused app can still change customer data and an old agency account still has full access.",
@@ -294,7 +294,7 @@ export const PROJECTS: Project[] = [
       "A security score that tracks how the store improves over time",
     ],
     stack: ["Shopify Admin GraphQL API", "Polaris", "React Router", "Shopify Flow", "Node.js"],
-    status: "[Status]",
+    status: "Shipped",
     accent: "#F5A524",
     image: "/work/scopewatch.webp",
     highlights: ["App permission audit", "Unused app detection", "Collaborator reviews"],
@@ -314,7 +314,7 @@ export const PROJECTS: Project[] = [
       "Pre-order flow and spec ticker built into the hero",
     ],
     stack: ["Next.js", "React", "Three.js", "Lenis"],
-    status: "[Status]",
+    status: "Under development",
     accent: "#3BA3E8",
     image: "/work/frostbyte.webp",
     highlights: ["Scroll storytelling", "3D teardown", "Pre-orders"],
@@ -344,7 +344,7 @@ export const PROJECTS: Project[] = [
     title: "AutoPress AI",
     kind: "WordPress plugin",
     tags: ["wordpress", "automation"],
-    year: "[Year]",
+    year: "2025",
     summary: "Give it a niche, and it plans the keywords and writes the articles, right inside WordPress.",
     boringPart:
       "Content sites live on volume. Someone has to research keywords, group them, brief each article, write it, add images and publish, fifty times over.",
@@ -355,7 +355,7 @@ export const PROJECTS: Project[] = [
       "Publishes straight to the WordPress site it runs on",
     ],
     stack: ["WordPress", "PHP", "OpenAI API"],
-    status: "[Status]",
+    status: "Active",
     accent: "#F5B82E",
     image: "/work/autopress-ai.webp",
     imageSize: [1600, 900],
@@ -429,7 +429,7 @@ export const PROJECTS: Project[] = [
     title: "Aito Auto",
     kind: "Website",
     tags: ["web"],
-    year: "[Year]",
+    year: "2026",
     summary: "A Finnish-language website for a used-car dealership, with listings the team manages themselves.",
     boringPart:
       "Car listings change every day. Without a proper CMS, every new car or price drop means a developer request.",
@@ -439,7 +439,7 @@ export const PROJECTS: Project[] = [
       "PostgreSQL behind the scenes for listings and enquiries",
     ],
     stack: ["Next.js", "PostgreSQL", "Strapi"],
-    status: "[Status]",
+    status: "Pre-release",
     accent: "#3C7EB9",
     image: "/work/aito-auto.webp",
     imageSize: [2400, 1423],
@@ -542,7 +542,7 @@ export const FAQ = [
   },
   {
     q: "How much does a project cost?",
-    a: "It depends on scope, so we quote a fixed price after a short call. No hourly meter running in the background. [Add a starting price if you want to qualify leads.]",
+    a: "It depends on scope, so we quote a fixed price after a short call. Projects start from 50,000 LKR. No hourly meter running in the background.",
   },
   {
     q: "How long does it take?",
