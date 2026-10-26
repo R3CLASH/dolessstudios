@@ -13,7 +13,8 @@ export const SITE = {
   email: "",
   location: "Sri Lanka",
   timezone: "Asia/Colombo",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  // `||`, not `??`: the first AWS deploy builds with it set but empty (deploy.yml).
+  url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
   /** Social links, e.g. { label: "LinkedIn", href: "https://…" }. Hidden everywhere while empty. */
   socials: [] as { label: string; href: string }[],
 };
