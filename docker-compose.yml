@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: doless
+      POSTGRES_PASSWORD: doless
+      POSTGRES_DB: doless
+    ports:
+      - "5432:5432"
+    volumes:
+      - doless-pg:/var/lib/postgresql/data
+
+volumes:
+  doless-pg:
