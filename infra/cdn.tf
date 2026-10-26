@@ -122,9 +122,10 @@ locals {
   api_domain = trimprefix(aws_apigatewayv2_api.site.api_endpoint, "https://")
 
   # One behavior per top-level entry in public/, like the routes OpenNext lists in open-next.output.json.
+  # Folders only match names with an extension: public/work/*.webp shares /work/ with the /work/[slug] pages.
   public_paths = distinct([
     for f in fileset("${local.open_next}/assets", "**") :
-    (strcontains(f, "/") ? "/${split("/", f)[0]}/*" : "/${f}")
+    (strcontains(f, "/") ? "/${split("/", f)[0]}/*.*" : "/${f}")
     if !startswith(f, "_next/") && f != "BUILD_ID"
   ])
 }
