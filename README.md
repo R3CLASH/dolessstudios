@@ -20,6 +20,7 @@ Contact form briefs are emailed to `CONTACT_TO_EMAIL` over SMTP (`SMTP_HOST`, `S
 | --- | --- |
 | `npm run dev` | Dev server |
 | `npm run build` / `npm start` | Production build / serve |
+| `npm run build:aws` | OpenNext build for AWS (`.open-next/`, used by `infra/`) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run db:generate` | New migration from `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations in `drizzle/` |
@@ -66,8 +67,41 @@ Search the code for `[` to find placeholders:
 - Budget ranges in `src/components/contact/BriefForm.tsx` are examples
 - Project covers are illustrated SVGs (`ProjectCover.tsx`); swap in real screenshots with `next/image` when you have them
 
-## Deploying
+## Deploying to AWS
 
-Any Node host works. On Vercel: add `DATABASE_URL` (Neon, Supabase or any Postgres), `NEXT_PUBLIC_SITE_URL` and the `SMTP_*` / `CONTACT_*` email settings, then run `npm run db:migrate` once against that database. The rate limiter in `lib/actions.ts` is in-memory per instance; swap for Upstash or similar if you need it to be global.
+`main` deploys itself through GitHub Actions ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) with
+Terraform ([`infra/`](infra/)), into account `349631302124`, region `us-east-1`. [OpenNext](https://opennext.js.org)
+(`open-next.config.ts`) turns the Next.js build into Lambda bundles:
+
+```
+CloudFront ─┬─ /_next/static/*, /work/* (public/)  → S3 "_assets/"
+            ├─ /_next/image                         → API Gateway → Lambda "doless-image" (sharp)
+            └─ everything else                      → API Gateway → Lambda "doless-server"
+                                                        └─ prerendered pages from S3 "_cache/"
+```
+
+Pages are prerendered at build time and cached at the edge until the next deploy, which invalidates CloudFront.
+The site URL (`NEXT_PUBLIC_SITE_URL`) is baked into the build: the custom domain if set, otherwise the CloudFront
+domain, so the very first deploy builds twice.
+
+One-time setup:
+
+1. `AWS_PROFILE=thavisha infra/bootstrap.sh` creates the Terraform state bucket and the `doless-gha-deploy` role
+   (trusts this repo's `main` branch and `production` environment through the account's GitHub OIDC provider).
+2. In GitHub → Settings → Environments, create `production` (limit it to the `main` branch), then add:
+   - variable `AWS_ROLE_ARN` = the role ARN the script printed
+   - variable `SMTP_USER` and secret `SMTP_PASS` (the Gmail address and its App Password). The deploy runs without
+     them, with a warning, but the contact form can't send until they're set.
+   - optional: variable `CONTACT_FROM_EMAIL`; secret `DATABASE_URL` (Neon, Supabase or any Postgres; migrations run
+     on deploy, and without it the newsletter says sign-ups are offline); variables `DOMAIN_NAME` +
+     `ACM_CERTIFICATE_ARN` (a us-east-1 certificate) for a custom domain.
+3. Push to `main` (or run the workflow by hand). The run summary shows the site URL.
+
+Local plan: `npm run build:aws && AWS_PROFILE=thavisha terraform -chdir=infra init && AWS_PROFILE=thavisha terraform -chdir=infra plan`
+(with `TF_VAR_smtp_user` / `TF_VAR_smtp_pass` set). Builds pick up a local `.env`, so deploy from CI rather than from a
+machine that has one.
+
+The rate limiter in `lib/actions.ts` is in-memory per Lambda instance; swap for Upstash or similar if you need it to be
+global.
 
 New briefs land in the `inquiries` table with `status = 'new'`. There's no admin UI yet; Drizzle Studio works for now.

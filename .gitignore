@@ -6,3 +6,10 @@ out
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
+
+# AWS build + terraform
+.open-next
+infra/.terraform
+infra/.build
+*.tfstate
+*.tfstate.*

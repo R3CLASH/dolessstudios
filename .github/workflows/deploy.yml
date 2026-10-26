@@ -1,0 +1,121 @@
+# Deploys main to AWS (infra/). One-time setup: README.md → "Deploying to AWS".
+name: Deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false # never interrupt a terraform apply
+
+permissions:
+  id-token: write # GitHub OIDC → AWS
+  contents: read
+
+jobs:
+  check:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_REGION: us-east-1
+      TF_IN_AUTOMATION: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+      TF_VAR_smtp_user: ${{ vars.SMTP_USER }}
+      TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
+      TF_VAR_contact_from_email: ${{ vars.CONTACT_FROM_EMAIL }}
+      TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+      TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+      TF_VAR_acm_certificate_arn: ${{ vars.ACM_CERTIFICATE_ARN }}
+    steps:
+      # Fails in seconds, by name, instead of deep inside the AWS login or terraform apply.
+      - name: Check deploy configuration
+        env:
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+        run: |
+          missing=""
+          [ -n "$AWS_ROLE_ARN" ] || missing="$missing AWS_ROLE_ARN(variable)"
+          if [ -z "$TF_VAR_smtp_user" ] || [ -z "$TF_VAR_smtp_pass" ]; then
+            echo "::warning::SMTP_USER (variable) or SMTP_PASS (secret) isn't set, so the contact form can't email briefs and will tell visitors it didn't send."
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Not visible to this job:$missing. Add them to the 'production' environment (or the repository) under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          case "$AWS_ROLE_ARN" in
+            */doless-gha-deploy) ;;
+            *) echo "::warning::AWS_ROLE_ARN is $AWS_ROLE_ARN; the role infra/bootstrap.sh set up is doless-gha-deploy." ;;
+          esac
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.17"
+          terraform_wrapper: false # keep `terraform output -raw` clean
+
+      - name: Terraform init
+        run: terraform -chdir=infra init -input=false
+
+      # The site URL is baked into the build (metadata, sitemap, Open Graph). Before the first deploy there's no
+      # CloudFront domain yet; that run builds twice (see below).
+      - name: Resolve site URL
+        run: |
+          url=""
+          [ -z "$TF_VAR_domain_name" ] || url="https://$TF_VAR_domain_name"
+          [ -n "$url" ] || url=$(terraform -chdir=infra output -raw site_url 2>/dev/null || true)
+          echo "SITE_URL=$url" >> "$GITHUB_ENV"
+
+      - name: Build app and Lambda bundles
+        run: NEXT_PUBLIC_SITE_URL="$SITE_URL" npm run build:aws
+
+      # Upload before the new server goes live, so its pages never point at files that aren't there yet.
+      # Skipped on the very first deploy (no bucket yet).
+      - name: Upload build output (pre-deploy)
+        run: |
+          bucket=$(terraform -chdir=infra output -raw site_bucket 2>/dev/null || true)
+          if [ -n "$bucket" ]; then infra/upload.sh "$bucket"; fi
+
+      - name: Terraform apply
+        run: terraform -chdir=infra apply -input=false -auto-approve
+
+      - name: Rebuild with the CloudFront URL (first deploy only)
+        if: env.SITE_URL == ''
+        run: |
+          url=$(terraform -chdir=infra output -raw site_url)
+          echo "SITE_URL=$url" >> "$GITHUB_ENV"
+          NEXT_PUBLIC_SITE_URL="$url" npm run build:aws
+          infra/upload.sh "$(terraform -chdir=infra output -raw site_bucket)"
+          terraform -chdir=infra apply -input=false -auto-approve
+
+      - name: Upload build output
+        run: infra/upload.sh "$(terraform -chdir=infra output -raw site_bucket)"
+
+      - name: Run database migrations
+        if: env.TF_VAR_database_url != ''
+        run: DATABASE_URL="$TF_VAR_database_url" npm run db:migrate
+
+      # Prerendered pages are cached at the edge until the next deploy; this is that point.
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation --paths "/*" \
+            --distribution-id "$(terraform -chdir=infra output -raw cloudfront_distribution_id)" >/dev/null
+
+      - name: Summary
+        run: echo "Deployed to $(terraform -chdir=infra output -raw site_url)" >> "$GITHUB_STEP_SUMMARY"

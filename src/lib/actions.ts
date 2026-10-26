@@ -25,7 +25,8 @@ function limited(ip: string, max = 5, windowMs = 10 * 60 * 1000) {
 
 async function clientIp() {
   const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+  // x-viewer-ip is set by CloudFront (infra/cdn.tf) and can't be spoofed through it; x-forwarded-for can.
+  return h.get("x-viewer-ip") || h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
 }
 
 export async function submitInquiry(_prev: FormState, formData: FormData): Promise<FormState> {
