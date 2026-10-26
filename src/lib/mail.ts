@@ -25,6 +25,9 @@ function getTransport(): Transporter | null {
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
+const from = () => process.env.CONTACT_FROM_EMAIL || `Do Less Studios <${process.env.SMTP_USER}>`;
+const to = () => process.env.CONTACT_TO_EMAIL || "thavishamudunkotuwa1998@gmail.com";
+
 /** Emails a new brief to the studio inbox. Reply-to is the person who sent it. Returns false if it wasn't sent. */
 export async function sendInquiryEmail(d: Inquiry, source: string): Promise<boolean> {
   const transport = getTransport();
@@ -46,8 +49,8 @@ export async function sendInquiryEmail(d: Inquiry, source: string): Promise<bool
 
   try {
     await transport.sendMail({
-      from: process.env.CONTACT_FROM_EMAIL || `Do Less Studios <${process.env.SMTP_USER}>`,
-      to: process.env.CONTACT_TO_EMAIL || "thavishamudunkotuwa1998@gmail.com",
+      from: from(),
+      to: to(),
       replyTo: { name: d.name, address: d.email },
       subject: `New brief from ${who}`,
       text: `${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\nThe boring part they want gone:\n${d.message}\n`,
@@ -58,6 +61,30 @@ export async function sendInquiryEmail(d: Inquiry, source: string): Promise<bool
     return true;
   } catch (err) {
     console.error("[inquiry] email failed", err);
+    return false;
+  }
+}
+
+/** Emails a newsletter sign-up to the studio inbox. Returns false if it wasn't sent. */
+export async function sendSubscriberEmail(email: string): Promise<boolean> {
+  const transport = getTransport();
+  if (!transport) {
+    console.error("[subscribe] SMTP_HOST / SMTP_USER / SMTP_PASS not set; sign-up not emailed", email);
+    return false;
+  }
+
+  try {
+    await transport.sendMail({
+      from: from(),
+      to: to(),
+      replyTo: email,
+      subject: `New newsletter sign-up: ${email}`,
+      text: `${email} signed up for the newsletter.\n`,
+      html: `<p style="font-family:system-ui,sans-serif;font-size:14px"><strong>${esc(email)}</strong> signed up for the newsletter.</p>`,
+    });
+    return true;
+  } catch (err) {
+    console.error("[subscribe] email failed", err);
     return false;
   }
 }

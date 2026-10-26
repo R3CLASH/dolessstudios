@@ -12,7 +12,7 @@ npm run db:migrate            # creates the tables
 npm run dev                   # http://localhost:3000
 ```
 
-The site renders without a database. The newsletter needs `DATABASE_URL`; without it it shows a friendly "offline" message and logs a server error.
+The site runs without a database. Newsletter sign-ups are emailed to `CONTACT_TO_EMAIL` like briefs, and also saved to Postgres when `DATABASE_URL` is set.
 
 Contact form briefs are emailed to `CONTACT_TO_EMAIL` over SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`; see `.env.example`) and also saved to Postgres when `DATABASE_URL` is set. A brief counts as received if either works; if neither does, the visitor is told it didn't send. The form is validated in the browser for instant feedback and again on the server with the same zod schema (`src/lib/inquiry.ts`).
 
@@ -87,9 +87,9 @@ One-time setup:
 2. In GitHub → Settings → Environments, create `production` (limit it to the `main` branch), then add:
    - variable `AWS_ROLE_ARN` = the role ARN the script printed
    - variable `SMTP_USER` and secret `SMTP_PASS` (the Gmail address and its App Password). The deploy runs without
-     them, with a warning, but the contact form can't send until they're set.
+     them, with a warning, but briefs and newsletter sign-ups can't reach you until they're set.
    - optional: variable `CONTACT_FROM_EMAIL`; secret `DATABASE_URL` (Neon, Supabase or any Postgres; migrations run
-     on deploy, and without it the newsletter says sign-ups are offline); variables `DOMAIN_NAME` +
+     on deploy; without it briefs and sign-ups are only emailed); variables `DOMAIN_NAME` +
      `ACM_CERTIFICATE_ARN` (a us-east-1 certificate) for a custom domain.
 3. Push to `main` (or run the workflow by hand). The run summary shows the site URL.
 

@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { fieldErrors, readInquiry } from "@/lib/inquiry";
-import { sendInquiryEmail } from "@/lib/mail";
+import { sendInquiryEmail, sendSubscriberEmail } from "@/lib/mail";
 
 export type FormState = {
   ok: boolean;
@@ -81,13 +81,19 @@ export async function subscribe(_prev: FormState, formData: FormData): Promise<F
   const parsed = emailSchema.safeParse(String(formData.get("email") ?? "").trim().toLowerCase());
   if (!parsed.success) return { ok: false, message: "That email doesn't look right." };
   if (limited(`sub:${await clientIp()}`, 5)) return { ok: false, message: "Easy. Try again in a bit." };
+  // Same as briefs: the email reaches us, the database row is a backup copy, and either one counts.
+  let stored = false;
   const db = getDb();
-  if (!db) return { ok: false, message: "Sign-ups are offline right now." };
-  try {
-    await db.insert(schema.subscribers).values({ email: parsed.data }).onConflictDoNothing();
-    return { ok: true, message: "You're in. We write rarely, on purpose." };
-  } catch (err) {
-    console.error("[subscribe] insert failed", err);
-    return { ok: false, message: "Couldn't save that. Try again later." };
+  if (db) {
+    try {
+      await db.insert(schema.subscribers).values({ email: parsed.data }).onConflictDoNothing();
+      stored = true;
+    } catch (err) {
+      console.error("[subscribe] insert failed", err);
+    }
   }
+  const emailed = await sendSubscriberEmail(parsed.data);
+
+  if (!emailed && !stored) return { ok: false, message: "Couldn't save that. Try again later." };
+  return { ok: true, message: "You're in. We write rarely, on purpose." };
 }

@@ -51,7 +51,7 @@ variable "contact_from_email" {
 }
 
 variable "database_url" {
-  description = "Optional Postgres URL for briefs and newsletter sign-ups. Without it the newsletter says it's offline."
+  description = "Optional Postgres URL for a copy of briefs and newsletter sign-ups. Both are emailed either way."
   type        = string
   default     = ""
   sensitive   = true
