@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { PRINCIPLES, WONT_DO, SITE } from "@/lib/content";
+import { WONT_DO, SITE } from "@/lib/content";
 import { PageHero } from "@/components/sections/PageHero";
 import { BigCta } from "@/components/sections/BigCta";
 import { Eyebrow, Reveal, SplitReveal } from "@/components/ui/motion";
 import { StrikeList } from "@/components/about/StrikeList";
 import { LazyMark } from "@/components/about/LazyMark";
+import { LazyLaws } from "@/components/about/LazyLaws";
 
 export const metadata: Metadata = {
   title: "About",
@@ -48,31 +49,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="border-y border-line bg-ink-2 py-24 sm:py-36" aria-labelledby="laws-title">
-        <div className="wrap flex flex-col gap-14">
-          <div className="flex flex-col gap-6">
-            <Eyebrow index="02">Principles</Eyebrow>
-            <h2 id="laws-title" className="display text-[clamp(2.6rem,6vw,6rem)]">
-              <span className="heavy">The laws</span> <span className="light">of lazy.</span>
-            </h2>
-          </div>
-          <Reveal className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {PRINCIPLES.map((p) => (
-              <article
-                key={p.n}
-                data-reveal
-                className="group relative flex min-h-80 flex-col justify-between overflow-hidden rounded-[24px] border border-line bg-ink p-7 transition-all duration-500 ease-[var(--ease-lazy)] hover:-translate-y-2 hover:rotate-[-1deg] hover:border-accent"
-              >
-                <span className="display heavy text-7xl text-paper/10 transition-colors duration-500 group-hover:text-accent">{p.n}</span>
-                <div className="flex flex-col gap-3">
-                  <h3 className="display heavy text-3xl">{p.title}</h3>
-                  <p className="text-paper/70">{p.body}</p>
-                </div>
-              </article>
-            ))}
-          </Reveal>
-        </div>
-      </section>
+      <LazyLaws />
 
       <section className="py-24 sm:py-36" aria-labelledby="wont-title">
         <div className="wrap grid grid-cols-1 gap-12 lg:grid-cols-12">

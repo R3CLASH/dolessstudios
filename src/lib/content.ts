@@ -592,10 +592,10 @@ export const AFTER_WEEK = [
 ];
 
 export const PRINCIPLES = [
-  { n: "I", title: "Never do it twice", body: "The second time a task shows up, we start writing the thing that does it." },
-  { n: "II", title: "Boring tech wins", body: "Proven tools, good defaults, fewer surprises at 2am." },
-  { n: "III", title: "Less code, fewer problems", body: "The best feature is the one you didn't need to build." },
-  { n: "IV", title: "Nothing to babysit", body: "If it needs someone watching it, it isn't finished." },
+  { n: "I", title: "Never do it twice", body: "The second time a task shows up, we start writing the thing that does it.", note: "Why Workflow Cloner exists" },
+  { n: "II", title: "Boring tech wins", body: "Proven tools, good defaults, fewer surprises at 2am.", note: "Next.js, Postgres, Shopify, WordPress" },
+  { n: "III", title: "Less code, fewer problems", body: "The best feature is the one you didn't need to build.", note: "Deleted code has zero bugs" },
+  { n: "IV", title: "Nothing to babysit", body: "If it needs someone watching it, it isn't finished.", note: "Done means you forget it's there" },
 ];
 
 export const WONT_DO = ["Endless status meetings", "Hourly billing surprises", "Locking you into our accounts", "Templates sold as custom", "Ten tools where one will do"];
