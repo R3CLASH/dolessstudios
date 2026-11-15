@@ -1,8 +1,9 @@
 # Off the shelf — handoff
 
 **As of 2026-11-15.** Everything below lives on branch `feat/off-the-shelf`, cut from `main` and not
-merged. Payments are still unbuilt (see §3.2). Read this before touching the off-the-shelf feature;
-the "Traps" section exists because each one cost real time to find.
+merged. **Phases 1, 2 and 3 are built** — catalog, demos, Dodo checkout, orders and webhooks. What is
+left is configuration (a Dodo account, product ids, keys) and §3.4 polish. Read this before touching
+the off-the-shelf feature; the "Traps" section exists because each one cost real time to find.
 
 **Commit on the branch, never on `main`.** A push to `main` runs `deploy.yml` — terraform apply to
 production. Every other branch runs `ci.yml` (`npm ci && typecheck && build`, no secrets set) and
@@ -63,17 +64,34 @@ all 22 routes 200; 22 schema/validation checks passed (including forged add-on i
 email-header-injection guard); a real lead row inserted and read back from Postgres; zero Doless shell
 leakage into any demo.
 
-**What is NOT done: payments.** `src/lib/solutions.ts` returns `null`, so the buy button never renders
-and both CTAs go to the quote form. No dead ends — this is intentional, not a bug.
+**Phase 2 — Dodo checkout.** Built. `src/lib/dodo.ts` (all config read inside functions, null when
+unset), `checkoutHrefFor()` filled in, `/checkout` as a static GET, and `/off-the-shelf/thanks` with
+three-tier confirmation.
+
+**Phase 3 — orders and webhooks.** Built. `orders` table (migration `drizzle/0002_orders.sql`),
+`/api/webhook/dodo-payments`, `src/lib/orders.ts`, and the two order emails in `src/lib/mail.ts`.
+
+Verified locally: clean `npm run typecheck`; clean unkeyed `npm run build` with no `DODO_*`,
+`DATABASE_URL` or SMTP set; unkeyed `/checkout` → 303 to the catalog, unkeyed webhook → 503, and the
+thanks page refusing to call a forged `status=succeeded` a sale. Then, with a self-signed webhook key
+and a throwaway product id: the buy button baked into the prerendered HTML for the configured
+solution only, a signed `payment.succeeded` → 200 and one row, **the same payment replayed under a
+different `webhook-id` → 200 and still one row**, bad signature → 401, `refund.succeeded` →
+`status = 'refunded'`, `payment.failed` → 200 and no row, and Postgres stopped mid-event → 200 plus
+an unrecorded-payment alert rather than a retry storm.
+
+**What is NOT done: configuration.** All eight `dodoProductId` values in `content.ts` are still
+`null` and no keys are set, so the feature is dormant exactly as before — buy buttons hidden, every
+CTA routing to the quote form. See §3.1 and "What is left" below.
 
 ---
 
 ## 3. Pending work
 
-### 3.1 Prerequisite — confirm Dodo can actually pay Sri Lanka (blocks Phase 2 only)
+### 3.1 Prerequisite — confirm Dodo can actually pay Sri Lanka (blocks going live, not the code)
 
-Dodo's seller-eligibility list for Sri Lanka **is not publicly documented**. Before building checkout,
-confirm with Dodo directly:
+Dodo's seller-eligibility list for Sri Lanka **is not publicly documented**. Checkout is built, but
+nothing can be sold through it until this is answered. Confirm with Dodo directly:
 
 - Can a Sri Lankan entity onboard and pass KYC?
 - Payout currency and destination (sources say USD/GBP/EUR; needs confirming for an LKR-settling bank)
@@ -83,65 +101,48 @@ confirm with Dodo directly:
 If Dodo can't serve Sri Lanka, Phase 1 still works (quote and invoice) and the payment provider can be
 swapped — the capability flag in `src/lib/solutions.ts` is the only integration point in the UI.
 
-### 3.2 Phase 2 — Dodo checkout
+### 3.2 / 3.3 — BUILT. What is left is configuration
 
-1. `npm i @dodopayments/nextjs` (Zod 4 peer already satisfied).
-2. Create `src/lib/dodo.ts` (`import "server-only"`):
-   - `dodoEnv()` returning `"live_mode"` only on an exact match — **the SDK defaults to live when unset**
-   - `dodoKey()`, `dodoWebhookKey()` returning `null` when empty
-   - `dodoReturnUrl()` derived from `SITE.url` (see trap #2)
-   - `productIdFor(solution)` picking test/live from `solution.dodoProductId`
-   - `fetchPayment(paymentId)` for the thanks page
-3. Fill in `checkoutHrefFor()` in `src/lib/solutions.ts` — it already has the intended body in a comment.
-   Return `null` unless both the API key and a product id exist. **Nothing else in the UI changes**;
-   the configurator already handles both states.
-4. Create `src/app/(site)/checkout/route.ts` — static `GET`, `export const dynamic = "force-dynamic"`,
-   handler built **lazily inside the function** (trap #3), `cache-control: no-store`, and a 303 redirect
-   to `/off-the-shelf?checkout=unavailable` when unkeyed so CI and un-keyed deploys don't 500.
+The code is in place and dormant. To switch it on:
 
-   *Verified:* route handlers work **either** at the `app/` root or inside a route group, even with two
-   root layouts — both were probed and both registered. `(site)` is suggested only for tidiness.
+1. **Create 4 products per mode (8 total)** in the Dodo dashboard, USD, Adaptive Currency on, and
+   paste the ids into the `dodoProductId` slots in `src/lib/content.ts` (lines ~277, 320, 363, 406).
+2. **Register the webhook** at `https://<site>/api/webhook/dodo-payments`, **separately in test and
+   live**, each with its own signing key. Subscribe to **only** `payment.succeeded`,
+   `payment.failed` and `refund.succeeded` — the adaptor validates against a closed schema and
+   answers **400** for an event type it doesn't know, so subscribing to everything manufactures
+   errors.
+3. **Local**: set `DODO_PAYMENTS_*` in `.env` (see `.env.example`).
+   **Production**: GitHub `production` environment — secrets `DODO_API_KEY`, `DODO_WEBHOOK_KEY`,
+   variable `DODO_ENVIRONMENT`.
+4. **Redeploy.** Not optional — see trap #13.
+5. **Do not deploy `CustomerPortal`** — the adaptor's portal handler does not authenticate callers
+   and there are no user accounts here.
 
-   *Static GET over session POST on purpose:* one product, qty 1, no cart or coupon, so sessions buy
-   nothing. A GET makes the CTA a plain `<a href>` with no fetch/loading/error path on the one
-   interaction that earns money. What's deprecated is the dynamic `/payments` proxy, not static checkout.
-5. Create `/off-the-shelf/thanks` — `robots: { index: false }`. **Query params are not proof of payment.**
-   Confirm in three tiers: `fetchPayment()` server-side (authoritative, also dodges the webhook race) →
-   `orders` row lookup → a neutral "if it went through, the email is on its way" message. Never render a
-   cancelled payment as success.
-6. Env and infra: `.env.example`, `infra/variables.tf`, `infra/lambda.tf` `local.server_env`,
-   `deploy.yml` `TF_VAR_dodo_*`, GitHub secrets. `DODO_PAYMENTS_ENVIRONMENT` goes in the **always-set**
-   block (unset = live = dangerous); the keys go in the conditional `if v != ""` block.
-7. Dodo dashboard: 4 products **per mode** (8 total) in USD with Adaptive Currency on; paste ids into
-   `dodoProductId`. Webhook endpoint registered **separately in test and live**, each with its own key.
-   **Do not deploy `CustomerPortal`** — the adaptor's portal handler does not authenticate callers and
-   there are no user accounts here.
+#### What the original plan got wrong, found while building it
 
-### 3.3 Phase 3 — orders and webhooks
-
-1. `orders` table in `src/db/schema.ts`: `paymentId` text **NOT NULL UNIQUE** (the idempotency key),
-   `solution`, `productId`, `name`, `email`, `amountCents`/`currency`,
-   `settlementAmountCents`/`settlementCurrency`, `metadata` jsonb,
-   `status` enum `paid|building|delivered|refunded|cancelled`, `emailed` bool, `createdAt`.
-   Indexes on `created_at`, `status`, `email`. Generate the migration — see trap #4.
-2. `src/app/(site)/api/webhook/dodo-payments/route.ts` — `Webhooks({...})` built lazily, `503` when
-   unconfigured (Dodo retries, nothing lost).
-3. `src/lib/orders.ts`:
-   - Normalise defensively (`payload?.data?.payment_id ?? payload?.payment_id`) — the exact payload shape
-     is the one thing that could not be verified offline
-   - **Dedupe on `payment_id`** via `.onConflictDoNothing().returning({ id })`; empty array = retry →
-     log and return **without emailing**
-   - Null-db fallback: a capped module-scope `Set` of seen ids, same spirit as the rate limiter
-   - Email studio then client, each in its own try/catch, then `UPDATE orders SET emailed = true`
-   - **Always 200** once the signature verified and the row persisted, even if email failed — otherwise
-     Dodo retries forever and duplicate-emails the client. If the insert itself throws, alert the studio
-     and still return 200
-   - **No `revalidatePath`/`revalidateTag`** (trap #5)
-4. Two email senders in `src/lib/mail.ts` following the existing `rowsTable`/`esc`/null-on-missing-SMTP
-   pattern: studio notification and client confirmation. Both must show **the amount Dodo actually
-   charged**, never `priceCents`. The client email is explicitly **not** a tax invoice — Dodo is merchant
-   of record and sends its own receipt.
-5. README ops section: SQL one-liners for "what's in the build queue", since there is no admin UI.
+- **The adaptor's `Checkout` GET returns JSON**, `NextResponse.json({ checkout_url })`, not a
+  redirect. A plain `<a href="/checkout">` straight at it would land the buyer on raw JSON. Our
+  route unwraps it and issues the 303 itself, which is what preserves the plain-link design.
+- **`checkoutHrefFor()` runs at build time** (trap #13), so the *build* needs the key and the mode.
+  `deploy.yml` passes them to the build step; without that the buy button is absent from the
+  deployed HTML however correctly Terraform sets the Lambda's environment.
+- **Two packages, not one.** `@dodopayments/nextjs` depends on `@dodopayments/core`, not on
+  `dodopayments`; the REST SDK used by `fetchPayment()` is a separate explicit dependency.
+- **The payload shape no longer needs guessing.** The adaptor Zod-validates before our handlers
+  run, so `data` is typed: the envelope is `{ business_id, type, timestamp, data }` and the payment
+  carries `payment_id`, `total_amount`, `currency`, `settlement_amount`, `settlement_currency`,
+  `customer.{name,email}`, `metadata` and `product_cart[]`. There is **no top-level `product_id`** —
+  it is `product_cart[0].product_id`.
+- **Webhook status codes, measured:** bad signature → **401**; valid JSON that doesn't match the
+  schema, including an unknown event type → **400**; **unparseable JSON → 500, not 400** (the
+  verifier JSON-parses internally, and a `SyntaxError` isn't a verification error). The old §6
+  expectation of 400 for malformed JSON was wrong. Dodo never sends malformed JSON, so this is a
+  documentation fix rather than a problem.
+- **`force-dynamic` is belt-and-braces.** Route handlers aren't cached by default in Next 16, and
+  `dynamic`/`revalidate` are only removed when Cache Components is enabled, which `next.config.ts`
+  does not do. What actually keeps CloudFront off `/checkout` is the `no-store` header, because the
+  default cache behaviour does list GET in `cached_methods`.
 
 ### 3.4 Phase 4 — polish
 
@@ -151,7 +152,8 @@ swapped — the capability flag in `src/lib/solutions.ts` is the only integratio
 - Homepage band after `ServicesRail`: "Or take one that already exists →"
 - `scripts/check-dodo-prices.ts` + `npm run check:prices`: fail if a dashboard price disagrees with
   `priceCents`. Add to `deploy.yml` as a **non-blocking** warning, not to `ci.yml` (no key there).
-- `webhook_events` table — only if events stop being 1:1 with a payment. `orders.payment_id` is enough today.
+- `webhook_events` table — only if events stop being 1:1 with a payment. `orders.payment_id` is enough today,
+  and the replay test confirms it.
 - Deeper demos (the sales pages advertise 7 pages; demos have 3). Decide whether the gap matters.
 
 ### 3.5 Open questions for the user
@@ -220,6 +222,19 @@ Everything below was verified over HTTP, not visually:
     `components/demo/restaurant/OpenStatus.tsx`, which renders nothing until mounted because the server
     cannot know the visitor's local time.
 
+13. **`checkoutHrefFor()` runs at BUILD time, not per request.** The detail pages are prerendered via
+    `generateStaticParams`, so whether the buy button exists is baked into the HTML. Consequences:
+    the *build* needs `DODO_PAYMENTS_API_KEY` and `DODO_PAYMENTS_ENVIRONMENT` (deploy.yml passes
+    both to the build step), the mode chosen at build decides whether test or live product ids get
+    baked, and **turning payments on or off requires a redeploy** — changing the Lambda's
+    environment alone does nothing to the button. The `/checkout` route and the webhook *are*
+    per-request, so they pick up env changes immediately; only the button is baked.
+
+14. **Subscribe the webhook to only the three events we handle.** The adaptor validates against a
+    closed schema and answers 400 for an unrecognised event type, so a "send me everything"
+    subscription produces a stream of 400s and Dodo retries on them.
+
+
 ---
 
 ## 5. Invariants — do not break these
@@ -264,16 +279,30 @@ select created_at, name, email, solution, addons, budget, timeline
 from inquiries where source like 'off-the-shelf:%' order by created_at desc;
 ```
 
-**Webhook testing needs a public HTTPS URL.** Tunnel it (`cloudflared tunnel --url http://localhost:3001`)
-and register the tunnel as the **test-mode** endpoint. Then, in order:
+**Webhook behaviour was already verified without a Dodo account**, by signing events with a key we
+chose ourselves — the harness is 60 lines of Node (HMAC-SHA256 over `{webhook-id}.{timestamp}.{body}`,
+base64, sent as `webhook-signature: v1,<sig>`; the secret is the key with `whsec_` stripped and
+base64-decoded). Worth rebuilding if this path ever changes, because it tests the thing most likely
+to be wrong without waiting on anyone.
 
-1. Dashboard test event → 200, one row, two emails
-2. **Resend the same event → 200, no second row, no second email** (the idempotency test; the one most
-   likely to be wrong)
-3. Bogus `webhook-signature` → **401**
-4. Malformed JSON → 400
-5. Stop Postgres, replay → 200 + studio alert, no retry storm
-6. Full test purchase end-to-end, then refund it → `status = 'refunded'`
+Measured status codes, so there's no need to re-derive them:
+
+| Case | Answer |
+|---|---|
+| Valid signed `payment.succeeded` | **200**, one row, two emails attempted |
+| Same payment replayed, any `webhook-id` | **200**, no second row, no second email |
+| Bogus `webhook-signature` | **401** |
+| Valid JSON, wrong shape — including an unknown event type | **400** |
+| Unparseable JSON | **500** (not 400 — the verifier JSON-parses internally) |
+| Postgres down | **200** + unrecorded-payment alert, no retry storm |
+| `refund.succeeded` | **200**, `status = 'refunded'` |
+| `payment.failed` | **200**, no row |
+
+**A real end-to-end purchase still needs a public HTTPS URL.** Tunnel it
+(`cloudflared tunnel --url http://localhost:3001`), register the tunnel as the **test-mode** endpoint,
+and set `DODO_PAYMENTS_RETURN_URL` to the tunnel so the thanks page is reachable. Then: a full test
+purchase, and a refund of it. That is the part no amount of local signing can stand in for — it is
+also the one chance to confirm the real payload matches the schema the adaptor expects.
 
 **Deployed smoke test — the key infra check:**
 
@@ -294,13 +323,17 @@ automated safety net.
 ```
 src/lib/content.ts                      SOLUTIONS, ADD_ONS, NAV, SOLUTION_STEPS/FAQ — the data model
 src/lib/money.ts                        USD minor units, the one formatter, display-only LKR rate
-src/lib/solutions.ts                    checkoutHrefFor() — the capability flag. PHASE 2 STARTS HERE
+src/lib/solutions.ts                    checkoutHrefFor() — the capability flag (runs at BUILD time)
+src/lib/dodo.ts                         Dodo config, all read inside functions; fetchPayment()
+src/lib/orders.ts                       webhook -> orders row, the idempotency gate, never throws
 src/lib/solutionInquiry.ts              quote schema, built from inquirySchema
 src/lib/actions.ts                      submitSolutionInquiry + the honeypot/rate-limit/clientIp helpers
 src/lib/mail.ts                         rowsTable(), sendSolutionInquiryEmail — order emails go here
 src/lib/demo/<slug>.ts                  fixture content for each demo's fake business
 
-src/app/(site)/off-the-shelf/           catalog + detail pages
+src/app/(site)/off-the-shelf/           catalog + detail pages + thanks/
+src/app/(site)/checkout/route.ts        static GET -> unwraps the adaptor's JSON -> 303 to Dodo
+src/app/(site)/api/webhook/dodo-payments/route.ts   signature verify -> orders.ts
 src/app/(demos)/                        demo root layout; demo/<slug>/ per vertical
 src/app/demo.css                        demos' theme + per-demo palettes (data-demo="<slug>")
 
@@ -310,6 +343,7 @@ src/components/demo/                    DemoBar + per-vertical marks and forms
 src/components/ui/form.tsx              Chip/Err/field, shared with BriefForm
 
 drizzle/0001_off_the_shelf.sql          inquiries.solution (nullable) + inquiries.addons (not null)
+drizzle/0002_orders.sql                 orders table; payment_id UNIQUE is the idempotency key
 infra/cdn.tf, infra/lambda.tf           routing (already fine) and server_env (needs Dodo vars)
 ```
 
