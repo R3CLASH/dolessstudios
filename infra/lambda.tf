@@ -20,6 +20,9 @@ locals {
       SMTP_HOST               = var.smtp_host
       SMTP_PORT               = var.smtp_port
       CONTACT_TO_EMAIL        = var.contact_to_email
+      # Always set, never conditional: the Dodo SDK treats an absent environment
+      # as live_mode, so leaving this out is how you charge real cards by accident.
+      DODO_PAYMENTS_ENVIRONMENT = var.dodo_environment
     },
     # Unset rather than empty, so the app's "not configured" checks read the same as locally.
     { for k, v in {
@@ -27,6 +30,11 @@ locals {
       SMTP_PASS          = var.smtp_pass
       CONTACT_FROM_EMAIL = var.contact_from_email
       DATABASE_URL       = var.database_url
+      # No DODO_PAYMENTS_RETURN_URL here. Building it from local.site_url creates a
+      # Terraform cycle (distribution -> apigw -> integration -> lambda env ->
+      # distribution); the app derives it from SITE.url instead.
+      DODO_PAYMENTS_API_KEY     = var.dodo_api_key
+      DODO_PAYMENTS_WEBHOOK_KEY = var.dodo_webhook_key
     } : k => v if v != "" },
   )
 }

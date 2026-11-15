@@ -12,7 +12,14 @@ export const BASE_CURRENCY = "USD" as const;
  */
 export const LKR_PER_USD = 305;
 
-/** "$249" when it's whole, "$249.50" when it isn't. */
+/**
+ * "$249" when it's whole, "$249.50" when it isn't.
+ *
+ * Assumes `currency` has two decimal places, which is true of USD and of every
+ * currency Adaptive Currency realistically charges our buyers in. A zero-decimal
+ * currency (JPY, KRW) would render 100x too small — worth knowing if an order
+ * email ever looks absurdly cheap.
+ */
 export function formatMoney(cents: number, currency: string = BASE_CURRENCY) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",

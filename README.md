@@ -78,9 +78,20 @@ Prices are integer **USD** cents in `content.ts` (`lib/money.ts` formats them). 
 approximate on purpose: Dodo Payments converts at checkout via Adaptive Currency, so no advertised LKR number would
 match what the card is actually charged.
 
-Instant checkout is **not wired up yet**. `lib/solutions.ts` returns `null`, so the buy button doesn't render and both
-CTAs go to the quote form — no dead ends. Turning payments on means filling in that one function plus the
-`dodoProductId` values in `content.ts`; the UI already handles both states.
+Instant checkout goes through **Dodo Payments**, and stays dormant until it's configured. `lib/solutions.ts`
+returns `null` from `checkoutHrefFor()` unless there's both an API key and a `dodoProductId` for the current mode, in
+which case the buy button simply doesn't render and both CTAs go to the quote form — no dead ends. So turning payments
+on is: create four products per mode in the Dodo dashboard, paste the ids into `content.ts`, and set `DODO_PAYMENTS_*`.
+
+Two things are easy to get wrong here:
+
+- **`checkoutHrefFor()` runs at build time**, because the detail pages are prerendered. The *build* needs
+  `DODO_PAYMENTS_API_KEY` and `DODO_PAYMENTS_ENVIRONMENT`, not just the Lambda, so **enabling payments needs a
+  redeploy** rather than an environment change. `deploy.yml` passes both to the build step.
+- **`DODO_PAYMENTS_ENVIRONMENT` must never be blank.** The Dodo SDK treats an absent value as `live_mode`. Our own
+  `dodoEnv()` defaults to `test_mode` and the Terraform variable does too, but set it explicitly anyway.
+
+Add-ons never touch checkout — anything customised routes to a quote — so their prices carry no payment risk.
 
 New solutions need an entry in `SOLUTIONS` plus art and a label in `components/solutions/SolutionArt.tsx` — both are
 `Record<SolutionSlug, …>`, so TypeScript won't let you forget. Real demos need `demoUrl` set and a screenshot at
@@ -171,6 +182,11 @@ One-time setup:
    - optional: variable `CONTACT_FROM_EMAIL`; secret `DATABASE_URL` (Neon, Supabase or any Postgres; migrations run
      on deploy; without it briefs and sign-ups are only emailed); variables `DOMAIN_NAME` +
      `ACM_CERTIFICATE_ARN` (a us-east-1 certificate) for a custom domain.
+   - optional, for instant checkout: secrets `DODO_API_KEY` and `DODO_WEBHOOK_KEY`, plus variable
+     `DODO_ENVIRONMENT` (`test_mode` or `live_mode`; defaults to `test_mode`). Without the keys the deploy still
+     succeeds, with a warning, and every CTA routes to the quote form. `live_mode` with either key missing fails the
+     run on purpose. Remember the `dodoProductId` values in `content.ts` have to be filled in too, and that the build
+     bakes the buy button — so a redeploy is what switches payments on.
 3. Push to `main` (or run the workflow by hand). The run summary shows the site URL.
 
 Local plan: `npm run build:aws && AWS_PROFILE=thavisha terraform -chdir=infra init && AWS_PROFILE=thavisha terraform -chdir=infra plan`
@@ -188,3 +204,37 @@ Off-the-shelf quote requests land in the same table, with `source = 'off-the-she
 select created_at, name, email, solution, addons, budget, timeline
 from inquiries where source like 'off-the-shelf:%' order by created_at desc;
 ```
+
+Paid off-the-shelf sites land in `orders`, written by the Dodo webhook. `payment_id` is `UNIQUE` and is what makes a
+replayed webhook a no-op. There's no admin UI, so the studio inbox plus this table is the build queue:
+
+```sql
+-- what's in the build queue, oldest first
+select created_at, name, email, solution, amount_cents, currency, status
+from orders where status in ('paid', 'building') order by created_at asc;
+
+-- orders whose emails didn't go out (SMTP was down when the webhook landed)
+select created_at, payment_id, email, solution from orders where not emailed order by created_at desc;
+
+-- mark one built, and then delivered
+update orders set status = 'building'  where payment_id = 'pay_...';
+update orders set status = 'delivered' where payment_id = 'pay_...';
+
+-- revenue as actually charged, by month (never recompute this from content.ts prices)
+select date_trunc('month', created_at) as month, count(*), sum(amount_cents) / 100.0 as usd
+from orders where status <> 'cancelled' group by 1 order by 1 desc;
+```
+
+`amount_cents` is what Dodo charged, and `settlement_amount_cents` is what reached the Dodo balance after conversion;
+they differ whenever Adaptive Currency did something. Refunds arrive as their own webhook and set `status = 'refunded'`.
+
+**Webhook endpoint:** `POST /api/webhook/dodo-payments`, registered separately in test and live mode, each with its own
+signing key. It answers `503` when unconfigured so Dodo retries instead of dropping the event. The one-line check that
+the deployed routing works at all:
+
+```sh
+curl -i -X POST https://<site>/api/webhook/dodo-payments -d '{}'
+```
+
+A **401** is the pass: it proves CloudFront sent a POST to the server Lambda and the signature verifier ran. HTML, a
+403, or a CloudFront error page means something is wrong with the routing.

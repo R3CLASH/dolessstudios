@@ -56,3 +56,28 @@ variable "database_url" {
   default     = ""
   sensitive   = true
 }
+
+variable "dodo_api_key" {
+  description = "Optional Dodo Payments API key. Empty hides the buy buttons and routes every CTA to the quote form."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "dodo_webhook_key" {
+  description = "Optional Dodo Payments webhook signing key. Empty makes the webhook answer 503, so Dodo retries rather than losing the event."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "dodo_environment" {
+  description = "Which Dodo mode to use. Defaults to test_mode on purpose: the SDK falls back to live_mode when this is unset, and a half-configured production must not be able to charge a real card."
+  type        = string
+  default     = "test_mode"
+
+  validation {
+    condition     = contains(["test_mode", "live_mode"], var.dodo_environment)
+    error_message = "dodo_environment must be exactly \"test_mode\" or \"live_mode\"."
+  }
+}

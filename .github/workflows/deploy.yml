@@ -31,6 +31,9 @@ jobs:
       TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
       TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
       TF_VAR_acm_certificate_arn: ${{ vars.ACM_CERTIFICATE_ARN }}
+      TF_VAR_dodo_api_key: ${{ secrets.DODO_API_KEY }}
+      TF_VAR_dodo_webhook_key: ${{ secrets.DODO_WEBHOOK_KEY }}
+      TF_VAR_dodo_environment: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
     steps:
       # Fails in seconds, by name, instead of deep inside the AWS login or terraform apply.
       - name: Check deploy configuration
@@ -41,6 +44,12 @@ jobs:
           [ -n "$AWS_ROLE_ARN" ] || missing="$missing AWS_ROLE_ARN(variable)"
           if [ -z "$TF_VAR_smtp_user" ] || [ -z "$TF_VAR_smtp_pass" ]; then
             echo "::warning::SMTP_USER (variable) or SMTP_PASS (secret) isn't set, so the contact form can't email briefs and will tell visitors it didn't send."
+          fi
+          if [ -z "$TF_VAR_dodo_api_key" ] || [ -z "$TF_VAR_dodo_webhook_key" ]; then
+            echo "::warning::DODO_API_KEY or DODO_WEBHOOK_KEY isn't set, so the buy buttons will be hidden and every CTA routes to the quote form."
+          fi
+          if [ "$TF_VAR_dodo_environment" = "live_mode" ] && { [ -z "$TF_VAR_dodo_api_key" ] || [ -z "$TF_VAR_dodo_webhook_key" ]; }; then
+            missing="$missing DODO_API_KEY/DODO_WEBHOOK_KEY(required-for-live_mode)"
           fi
           if [ -n "$missing" ]; then
             echo "::error::Not visible to this job:$missing. Add them to the 'production' environment (or the repository) under Settings → Secrets and variables → Actions."
@@ -82,7 +91,15 @@ jobs:
           [ -n "$url" ] || url=$(terraform -chdir=infra output -raw site_url 2>/dev/null || true)
           echo "SITE_URL=$url" >> "$GITHUB_ENV"
 
+      # checkoutHrefFor() runs at BUILD time, because the solution detail pages are
+      # prerendered via generateStaticParams. So the build — not just the Lambda —
+      # has to see the key and the mode, or the buy button is absent from the
+      # deployed HTML even with Terraform setting them correctly on the function.
+      # This is also why turning payments on needs a redeploy, not an env change.
       - name: Build app and Lambda bundles
+        env:
+          DODO_PAYMENTS_API_KEY: ${{ secrets.DODO_API_KEY }}
+          DODO_PAYMENTS_ENVIRONMENT: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
         run: NEXT_PUBLIC_SITE_URL="$SITE_URL" npm run build:aws
 
       # Upload before the new server goes live, so its pages never point at files that aren't there yet.
@@ -97,6 +114,9 @@ jobs:
 
       - name: Rebuild with the CloudFront URL (first deploy only)
         if: env.SITE_URL == ''
+        env:
+          DODO_PAYMENTS_API_KEY: ${{ secrets.DODO_API_KEY }}
+          DODO_PAYMENTS_ENVIRONMENT: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
         run: |
           url=$(terraform -chdir=infra output -raw site_url)
           echo "SITE_URL=$url" >> "$GITHUB_ENV"
