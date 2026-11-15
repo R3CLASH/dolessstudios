@@ -129,18 +129,26 @@ export async function recordPaidOrder(p: Payment): Promise<void> {
 
   // Past the dedupe gate: this is the one and only time we email for this payment.
   // Each send is independent so a failure on one doesn't cost us the other.
+  let studioOk = false;
+  let clientOk = false;
   try {
-    await sendOrderNotificationEmail(mail);
+    studioOk = await sendOrderNotificationEmail(mail);
   } catch (err) {
     console.error("[order] studio email threw", err);
   }
   try {
-    await sendOrderConfirmationEmail(mail);
+    clientOk = await sendOrderConfirmationEmail(mail);
   } catch (err) {
     console.error("[order] confirmation email threw", err);
   }
 
-  if (stored) {
+  // Only true when both really went out, so `where not emailed` is a worklist of
+  // orders a human still has to follow up rather than a column that always reads
+  // true. The senders return false rather than throwing when SMTP is unset.
+  if (!studioOk || !clientOk) {
+    console.error("[order] emails incomplete", p.payment_id, { studioOk, clientOk });
+  }
+  if (stored && studioOk && clientOk) {
     try {
       const db = getDb();
       if (db) {
