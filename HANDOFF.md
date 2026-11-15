@@ -4,6 +4,10 @@
 merged. Payments are still unbuilt (see §3.2). Read this before touching the off-the-shelf feature;
 the "Traps" section exists because each one cost real time to find.
 
+**Commit on the branch, never on `main`.** A push to `main` runs `deploy.yml` — terraform apply to
+production. Every other branch runs `ci.yml` (`npm ci && typecheck && build`, no secrets set) and
+deploys nothing. The branch is pushed to `origin` and its CI is green.
+
 ---
 
 ## 1. What this feature is
@@ -40,7 +44,8 @@ The original plan is at `~/.claude/plans/we-built-doless-recently-dreamy-tiger.m
 - `/off-the-shelf` catalog with tag filtering; `/off-the-shelf/[slug]` detail pages
 - `SolutionConfigurator` — add-on picker with running total and the hybrid CTA switch
 - `SolutionQuoteForm` + `submitSolutionInquiry` + `sendSolutionInquiryEmail`
-- Two nullable columns on `inquiries` (`solution`, `addons`), migration `drizzle/0001_off_the_shelf.sql`
+- Two columns on `inquiries` — `solution text` (nullable) and `addons text[] NOT NULL DEFAULT '{}'`
+  (empty array, never null) — migration `drizzle/0001_off_the_shelf.sql`
 - Nav, footer, ⌘K, page transitions, sitemap, robots, JSON-LD (`Service` + `Offer`)
 - `src/components/ui/form.tsx` — `Chip`/`Err`/`field` extracted and shared with `BriefForm`
 
@@ -304,7 +309,7 @@ src/components/solutions/               SolutionGrid, SolutionConfigurator, Solu
 src/components/demo/                    DemoBar + per-vertical marks and forms
 src/components/ui/form.tsx              Chip/Err/field, shared with BriefForm
 
-drizzle/0001_off_the_shelf.sql          the two nullable inquiries columns
+drizzle/0001_off_the_shelf.sql          inquiries.solution (nullable) + inquiries.addons (not null)
 infra/cdn.tf, infra/lambda.tf           routing (already fine) and server_env (needs Dodo vars)
 ```
 
