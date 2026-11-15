@@ -421,6 +421,17 @@ export const SOLUTIONS: Solution[] = [
   },
 ];
 
+/**
+ * The three things we need from a buyer before we can build, whichever solution
+ * they bought. Shown on every detail page and again on the thanks page, which is
+ * the start of delivery rather than just a receipt.
+ */
+export const SOLUTION_WE_NEED = [
+  "Your logo, or the branding pack",
+  "A few photos of the real thing",
+  "Access to your domain",
+];
+
 export const getSolution = (slug: string) => SOLUTIONS.find((s) => s.slug === slug);
 export const SOLUTION_SLUGS = SOLUTIONS.map((s) => s.slug) as [SolutionSlug, ...SolutionSlug[]];
 
