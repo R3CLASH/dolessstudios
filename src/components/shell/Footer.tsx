@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
-import { NAV, SERVICES, SITE } from "@/lib/content";
+import { NAV, SERVICES, SITE, SOLUTIONS } from "@/lib/content";
 import { subscribe, type FormState } from "@/lib/actions";
 import { Mark } from "@/components/brand/Mark";
 import { scrollToTop } from "./SmoothScroll";
@@ -70,7 +70,7 @@ export function Footer() {
   return (
     <footer className="relative overflow-hidden border-t border-line bg-ink pt-16 sm:pt-24">
       <div className="wrap grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-12">
-        <div className="flex flex-col gap-6 lg:col-span-4">
+        <div className="flex flex-col gap-6 lg:col-span-3">
           <Mark size={56} className="text-paper" />
           <p className="max-w-xs text-lg leading-snug text-paper/85">{SITE.tagline}</p>
           <LocalClock />
@@ -99,7 +99,19 @@ export function Footer() {
             ))}
           </ul>
         </nav>
-        <div className="sm:col-span-2 lg:col-span-4">
+        <nav aria-label="Footer off-the-shelf sites" className="lg:col-span-2">
+          <p className="eyebrow mb-4">Off the shelf</p>
+          <ul className="flex flex-col gap-2">
+            {SOLUTIONS.map((s) => (
+              <li key={s.slug}>
+                <Link href={`/off-the-shelf/${s.slug}`} className="group inline-flex text-paper/80 hover:text-paper">
+                  <span className="strike strike-on-hover">{s.title}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className="sm:col-span-2 lg:col-span-3">
           <Newsletter />
           {SITE.socials.length > 0 && (
             <div className="mt-6 flex flex-wrap gap-2">

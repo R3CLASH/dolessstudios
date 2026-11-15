@@ -15,6 +15,10 @@ export const inquiries = pgTable(
     timeline: text("timeline"),
     message: text("message").notNull(),
     source: text("source"),
+    /** Off-the-shelf leads only: which solution they want (a SolutionSlug). */
+    solution: text("solution"),
+    /** Off-the-shelf leads only: the AddOn ids they picked. */
+    addons: text("addons").array().notNull().default([]),
     status: inquiryStatus("status").notNull().default("new"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

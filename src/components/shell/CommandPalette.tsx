@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
-import { NAV, PROJECTS, SERVICES, SITE } from "@/lib/content";
+import { NAV, PROJECTS, SERVICES, SITE, SOLUTIONS } from "@/lib/content";
 import { useTransitionNav } from "./PageTransition";
 import { lockScroll } from "./SmoothScroll";
 
@@ -34,6 +34,14 @@ export function CommandPalette() {
         hint: s.index,
         run: () => (close(), navigate(`/services/${s.slug}`)),
       })),
+      // Prefixed ids: solution slugs could otherwise collide with a service or project slug.
+      ...SOLUTIONS.map((s) => ({
+        id: `sol-${s.slug}`,
+        group: "Off the shelf",
+        label: `${s.title} — ${s.vertical}`,
+        hint: s.index,
+        run: () => (close(), navigate(`/off-the-shelf/${s.slug}`)),
+      })),
       ...PROJECTS.map((p) => ({ id: p.slug, group: "Work", label: p.title, hint: p.kind, run: () => (close(), navigate(`/work/${p.slug}`)) })),
       ...(SITE.email
         ? [
@@ -51,6 +59,7 @@ export function CommandPalette() {
           ]
         : []),
       { id: "start", group: "Actions", label: "Start a project", hint: "↵", run: () => (close(), navigate("/contact")) },
+      { id: "buy", group: "Actions", label: "Buy a ready-built site", hint: "↵", run: () => (close(), navigate("/off-the-shelf")) },
     ];
   }, [navigate]);
 
