@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SITE, SOLUTIONS, SOLUTION_FAQ, addOnsFor, getSolution } from "@/lib/content";
+import { SITE, SOLUTIONS, SOLUTION_FAQ, SOLUTION_WE_NEED, addOnsFor, getSolution } from "@/lib/content";
 import { BASE_CURRENCY, formatLkrApprox, formatMoney } from "@/lib/money";
 import { checkoutHrefFor } from "@/lib/solutions";
 import { PageHero } from "@/components/sections/PageHero";
@@ -31,9 +31,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     openGraph: { title, description: s.tagline, type: "website", url: `/off-the-shelf/${s.slug}` },
   };
 }
-
-/** What we need from them before we can build. Same three things every time. */
-const WE_NEED = ["Your logo, or the branding pack", "A few photos of the real thing", "Access to your domain"];
 
 export default async function SolutionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -160,7 +157,7 @@ export default async function SolutionPage({ params }: { params: Promise<{ slug:
             <div className="flex flex-col gap-4 rounded-2xl border border-line bg-ink-2 p-5 sm:p-7">
               <span className="eyebrow">What we need from you</span>
               <ul className="flex flex-col gap-3">
-                {WE_NEED.map((n) => (
+                {SOLUTION_WE_NEED.map((n) => (
                   <li key={n} className="flex items-start gap-3 text-lg text-paper/80">
                     <span className="mt-[11px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                     {n}
