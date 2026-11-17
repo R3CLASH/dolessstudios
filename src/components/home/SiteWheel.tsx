@@ -116,7 +116,7 @@ export function SiteWheel() {
               </SplitReveal>
             </div>
             <p className="pointer-events-auto hidden max-w-sm text-paper/70 md:block">
-              Car dealers to jewellers, perfume to boxing. Keep scrolling to spin through sites we designed and built.
+              Car dealers to perfume stores to boxing gyms. Keep scrolling to spin through sites we designed and built.
             </p>
           </div>
 

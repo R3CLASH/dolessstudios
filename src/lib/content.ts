@@ -547,14 +547,14 @@ export const SHOWCASE: ShowcaseSite[] = [
     image: "/work/back2fit.webp",
     project: "back2fit",
   },
-  {
-    title: "Nileka Jewellery",
-    url: "https://www.nilekajewelry.lk",
-    kind: "Jewellery store",
-    accent: "#D4AF37",
-    image: "/work/nileka.webp",
-    project: "nileka-jewellery",
-  },
+  // Add back once its screenshot is saved as public/work/fintra-finance.webp:
+  // {
+  //   title: "Fintra Finance",
+  //   url: "https://fintrafinance.com.au",
+  //   kind: "Finance · Australia",
+  //   accent: "#2FB5A0",
+  //   image: "/work/fintra-finance.webp",
+  // },
 ];
 
 export const PROCESS = [
