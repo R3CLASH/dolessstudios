@@ -551,6 +551,14 @@ export const SHOWCASE: ShowcaseSite[] = [
     accent: "#F5C431",
     image: "/work/fintra-finance.webp",
   },
+  {
+    title: "ThemeMerge",
+    url: "https://thememerge.com",
+    kind: "Shopify app · Marketing site",
+    accent: "#FF7A1A",
+    image: "/work/thememerge-site.webp",
+    project: "thememerge",
+  },
 ];
 
 export const PROCESS = [
