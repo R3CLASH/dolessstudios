@@ -232,7 +232,7 @@ export const PROJECTS: Project[] = [
     stack: ["Next.js", "React", "PostgreSQL", "DynamoDB", "Amazon S3", "NextAuth", "GSAP"],
     status: "Active / pre-release",
     accent: "#C9A15B",
-    image: "/work/checklist.webp",
+    image: "/work/checklist-hero.webp",
     highlights: ["Verified vendors", "Project planning", "Quotes & bookings"],
   },
   {
@@ -336,7 +336,7 @@ export const PROJECTS: Project[] = [
     stack: ["HTML", "CSS", "JavaScript"],
     status: "Live at back2fit.lk",
     accent: "#E10600",
-    image: "/work/back2fit.webp",
+    image: "/work/back2fit-hero.webp",
     highlights: ["Programmes & pricing", "Class schedule", "Join online"],
   },
   {
@@ -421,7 +421,7 @@ export const PROJECTS: Project[] = [
     stack: ["WordPress", "WooCommerce", "Elementor", "Payzy", "Custom theme"],
     status: "Live at fragrancevault.lk",
     accent: "#C9A646",
-    image: "/work/fragrancevault.webp",
+    image: "/work/fragrancevault-hero.webp",
     highlights: ["Instalment payments", "Monthly subscription", "Decants & full bottles"],
   },
   {
@@ -441,7 +441,7 @@ export const PROJECTS: Project[] = [
     stack: ["Next.js", "PostgreSQL", "Strapi"],
     status: "Pre-release",
     accent: "#3C7EB9",
-    image: "/work/aito-auto.webp",
+    image: "/work/aito-auto-hero.webp",
     highlights: ["Finnish-language", "Self-managed listings", "Monthly price up front"],
   },
   {
@@ -510,7 +510,7 @@ export const SHOWCASE: ShowcaseSite[] = [
     url: "https://www.aitoautooy.fi",
     kind: "Car dealership · Finland",
     accent: "#3C7EB9",
-    image: "/work/aito-auto.webp",
+    image: "/work/aito-auto-hero.webp",
     project: "aito-auto",
   },
   {
@@ -525,7 +525,7 @@ export const SHOWCASE: ShowcaseSite[] = [
     url: "https://ckqfwhcrievgrv.checklist.lk/",
     kind: "Planning platform",
     accent: "#C9A15B",
-    image: "/work/checklist.webp",
+    image: "/work/checklist-hero.webp",
     project: "checklist",
   },
   {
@@ -533,7 +533,7 @@ export const SHOWCASE: ShowcaseSite[] = [
     url: "https://fragrance-vault.up.railway.app/",
     kind: "Perfume store",
     accent: "#C9A646",
-    image: "/work/fragrancevault.webp",
+    image: "/work/fragrancevault-hero.webp",
     project: "fragrance-vault",
   },
   {
@@ -541,7 +541,7 @@ export const SHOWCASE: ShowcaseSite[] = [
     url: "https://www.back2fit.lk",
     kind: "Boxing academy",
     accent: "#E10600",
-    image: "/work/back2fit.webp",
+    image: "/work/back2fit-hero.webp",
     project: "back2fit",
   },
   {
