@@ -492,6 +492,70 @@ export const PROJECTS: Project[] = [
 
 export const getProject = (slug: string) => PROJECTS.find((p) => p.slug === slug);
 
+export type ShowcaseSite = {
+  title: string;
+  url: string;
+  kind: string;
+  accent: string;
+  /** Hero screenshot in /public (16:10 works best). Without one, a branded title card is shown. */
+  image?: string;
+  imageSize?: [number, number];
+  /** Slug of the matching case study in PROJECTS, if there is one. */
+  project?: string;
+};
+
+/** Live sites on the homepage wheel, in spin order. */
+export const SHOWCASE: ShowcaseSite[] = [
+  {
+    title: "Aito Auto",
+    url: "https://www.aitoautooy.fi",
+    kind: "Car dealership · Finland",
+    accent: "#3C7EB9",
+    image: "/work/aito-auto.webp",
+    imageSize: [2400, 1423],
+    project: "aito-auto",
+  },
+  {
+    title: "Creative Works Co.",
+    url: "https://web-production-828036a0.up.railway.app/",
+    kind: "Website",
+    accent: "#7B6CF6",
+    // image: "/work/creative-works.webp",
+  },
+  {
+    title: "Checklist.lk",
+    url: "https://ckqfwhcrievgrv.checklist.lk/",
+    kind: "Planning platform",
+    accent: "#C9A15B",
+    image: "/work/checklist.webp",
+    project: "checklist",
+  },
+  {
+    title: "Fragrance Vault",
+    url: "https://fragrance-vault.up.railway.app/",
+    kind: "Perfume store",
+    accent: "#C9A646",
+    image: "/work/fragrancevault.webp",
+    project: "fragrance-vault",
+  },
+  {
+    title: "Back2Fit",
+    url: "https://www.back2fit.lk",
+    kind: "Boxing academy",
+    accent: "#E10600",
+    image: "/work/back2fit.webp",
+    project: "back2fit",
+  },
+  {
+    title: "Nileka Jewellery",
+    url: "https://www.nilekajewelry.lk",
+    kind: "Jewellery store",
+    accent: "#D4AF37",
+    image: "/work/nileka.webp",
+    project: "nileka-jewellery",
+  },
+];
+
 export const PROCESS = [
   {
     n: "01",

@@ -70,7 +70,7 @@ export function ServicesRail() {
       >
         {/* Intro panel */}
         <div className="flex w-[80vw] shrink-0 flex-col justify-center gap-6 pr-4 sm:w-[60vw] lg:w-[38vw] lg:pr-10">
-          <Eyebrow index="02">Services</Eyebrow>
+          <Eyebrow index="03">Services</Eyebrow>
           <h2 id="services-title" className="display text-[clamp(3rem,7vw,7.5rem)]">
             <span className="heavy">Five ways</span>
             <br />

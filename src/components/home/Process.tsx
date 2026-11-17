@@ -57,7 +57,7 @@ export function Process() {
       <div className="wrap grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-8">
         <div className="lg:col-span-5">
           <div className="flex flex-col gap-8 lg:sticky lg:top-28">
-            <Eyebrow index="04">How it works</Eyebrow>
+            <Eyebrow index="05">How it works</Eyebrow>
             <h2 id="process-title" className="display text-[clamp(2.6rem,5.6vw,5.6rem)]">
               <span className="heavy">The lazy</span> <span className="light">method.</span>
             </h2>

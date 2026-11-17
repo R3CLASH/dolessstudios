@@ -63,7 +63,7 @@ export function BeforeAfter() {
       <div className="wrap flex flex-col gap-12">
         <div className="grid grid-cols-1 items-end gap-8 lg:grid-cols-12">
           <div className="flex flex-col gap-6 lg:col-span-7">
-            <Eyebrow index="03">Before / after</Eyebrow>
+            <Eyebrow index="04">Before / after</Eyebrow>
             <SplitReveal as="h2" className="display text-[clamp(2.6rem,6vw,6rem)]">
               <span id="ba-title" className="heavy">
                 Same week.

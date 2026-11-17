@@ -273,6 +273,106 @@ html.lenis body {
   animation: art-dash 1.4s linear infinite;
 }
 
+/* ------- Site wheel (homepage showcase) ------- */
+.site-wheel {
+  /* Phones: wheel sits under the frame, pointer at 12 o'clock, names run along the rim. */
+  --W: max(230vw, 860px);
+  --arc: clamp(118px, 20svh, 170px);
+  --pointer: -90deg;
+  --R: calc(var(--W) * 0.4);
+  --turn: 90deg;
+  --shift: -50%;
+  --ox: 50%;
+  --oy: 115%;
+}
+@media (min-width: 64rem) {
+  /* Desktop: wheel hugs the left edge, pointer at 3 o'clock, names read outwards. */
+  .site-wheel {
+    --W: min(105svh, 80vw, 1050px);
+    --pointer: 0deg;
+    --R: calc(var(--W) * 0.415);
+    --turn: 0deg;
+    --shift: -100%;
+    --ox: -12%;
+    --oy: 50%;
+  }
+}
+.wheel-layer {
+  mask-image: linear-gradient(to right, transparent, #000 22%, #000 78%, transparent);
+}
+.wheel-pos {
+  position: absolute;
+  width: var(--W);
+  height: var(--W);
+  left: 50%;
+  top: calc(100% - var(--arc));
+  translate: -50% 0;
+}
+.wheel-orient {
+  transform: rotate(var(--pointer));
+}
+.wheel-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: 0 0;
+  transform: rotate(var(--a)) translateX(var(--R)) rotate(var(--turn)) translate(var(--shift), -50%);
+  white-space: nowrap;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  padding: 0.3em 0.2em;
+}
+.wheel-pointer {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - var(--arc) - 14px);
+  translate: -50% 0;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid var(--color-accent);
+}
+.wheel-frame {
+  width: min(100%, calc((78svh - 320px) * 1.6));
+  margin-inline: auto;
+}
+.wheel-shot {
+  clip-path: circle(var(--r) at var(--ox) var(--oy));
+}
+.wheel-shot-img {
+  transform-origin: var(--ox) var(--oy);
+}
+@media (min-width: 64rem) {
+  .wheel-layer {
+    mask-image: linear-gradient(to bottom, transparent 6%, #000 34%, #000 80%, transparent 100%);
+  }
+  .wheel-pos {
+    left: calc(var(--W) / -2);
+    top: 55%;
+    translate: 0 -50%;
+  }
+  .wheel-label {
+    font-size: clamp(1.4rem, 2.2vw, 2.3rem);
+  }
+  .wheel-pointer {
+    left: calc(var(--W) / 2 + 12px);
+    top: 55%;
+    translate: 0 -50%;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 0;
+    border-right: 10px solid var(--color-accent);
+  }
+  .wheel-frame {
+    width: min(100%, calc((100svh - 23rem) * 1.6));
+  }
+}
+.swap-in {
+  animation: swap-in 0.7s var(--ease-lazy) both;
+}
+
 .float-slow {
   animation: float 7s ease-in-out infinite;
 }
@@ -318,6 +418,10 @@ html.lenis body {
 }
 @keyframes art-dash {
   to { stroke-dashoffset: -28; }
+}
+@keyframes swap-in {
+  from { transform: translateY(60%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 @keyframes float {
   0%, 100% { transform: translateY(0); }

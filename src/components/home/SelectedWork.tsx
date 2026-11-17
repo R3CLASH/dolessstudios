@@ -48,7 +48,7 @@ export function SelectedWork() {
       <div className="wrap flex flex-col gap-14">
         <div className="flex flex-wrap items-end justify-between gap-8">
           <div className="flex flex-col gap-6">
-            <Eyebrow index="05">Selected work</Eyebrow>
+            <Eyebrow index="06">Selected work</Eyebrow>
             <SplitReveal as="h2" className="display text-[clamp(2.6rem,6vw,6rem)]">
               <span id="work-title" className="heavy">
                 Proof we do
