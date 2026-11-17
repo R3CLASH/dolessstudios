@@ -239,36 +239,18 @@ function BrowserFrame({ active }: { active: number }) {
             style={{ "--r": i === 0 ? "160%" : "0%" } as CSSProperties}
           >
             <div data-img className="wheel-shot-img absolute inset-0">
-              {s.image ? (
-                <Image
-                  src={s.image}
-                  alt={`${s.title} homepage hero, designed and built by Do Less Studios`}
-                  fill
-                  sizes="(min-width: 1024px) 58vw, 100vw"
-                  className="object-cover object-top"
-                />
-              ) : (
-                <TitleCard site={s} />
-              )}
+              <Image
+                src={s.image}
+                alt={`${s.title} homepage hero, designed and built by Do Less Studios`}
+                fill
+                sizes="(min-width: 1024px) 58vw, 100vw"
+                className="object-cover object-top"
+              />
             </div>
             <div data-dim aria-hidden="true" className="absolute inset-0 bg-ink opacity-0" />
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-/** Stand-in for sites that don't have a screenshot yet. */
-function TitleCard({ site }: { site: ShowcaseSite }) {
-  return (
-    <div
-      className="flex h-full w-full flex-col justify-between p-[6%]"
-      style={{ background: `radial-gradient(110% 90% at 100% 0%, ${site.accent}66 0%, ${site.accent}14 45%, transparent 75%), #1a1c21` }}
-    >
-      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-mist">{site.kind}</span>
-      <span className="display heavy text-[clamp(2rem,6vw,5.5rem)]">{site.title}</span>
-      <span className="font-mono text-xs text-paper/70">{host(site.url)}</span>
     </div>
   );
 }

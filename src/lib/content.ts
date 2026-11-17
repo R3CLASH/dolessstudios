@@ -497,14 +497,14 @@ export type ShowcaseSite = {
   url: string;
   kind: string;
   accent: string;
-  /** Hero screenshot in /public (16:10 works best). Without one, a branded title card is shown. */
-  image?: string;
+  /** Hero screenshot saved in /public/work (static file, 16:10 works best, e.g. 2400×1500). */
+  image: string;
   imageSize?: [number, number];
   /** Slug of the matching case study in PROJECTS, if there is one. */
   project?: string;
 };
 
-/** Live sites on the homepage wheel, in spin order. */
+/** Sites on the homepage wheel, in spin order. Each shows a static hero screenshot from /public/work. */
 export const SHOWCASE: ShowcaseSite[] = [
   {
     title: "Aito Auto",
@@ -515,13 +515,14 @@ export const SHOWCASE: ShowcaseSite[] = [
     imageSize: [2400, 1423],
     project: "aito-auto",
   },
-  {
-    title: "Creative Works Co.",
-    url: "https://web-production-828036a0.up.railway.app/",
-    kind: "Website",
-    accent: "#7B6CF6",
-    // image: "/work/creative-works.webp",
-  },
+  // Add back once its screenshot is saved as public/work/creative-works.webp:
+  // {
+  //   title: "Creative Works Co.",
+  //   url: "https://web-production-828036a0.up.railway.app/",
+  //   kind: "Website",
+  //   accent: "#7B6CF6",
+  //   image: "/work/creative-works.webp",
+  // },
   {
     title: "Checklist.lk",
     url: "https://ckqfwhcrievgrv.checklist.lk/",
