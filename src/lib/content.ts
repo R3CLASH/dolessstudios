@@ -442,7 +442,6 @@ export const PROJECTS: Project[] = [
     status: "Pre-release",
     accent: "#3C7EB9",
     image: "/work/aito-auto.webp",
-    imageSize: [2400, 1423],
     highlights: ["Finnish-language", "Self-managed listings", "Monthly price up front"],
   },
   {
@@ -512,17 +511,15 @@ export const SHOWCASE: ShowcaseSite[] = [
     kind: "Car dealership · Finland",
     accent: "#3C7EB9",
     image: "/work/aito-auto.webp",
-    imageSize: [2400, 1423],
     project: "aito-auto",
   },
-  // Add back once its screenshot is saved as public/work/creative-works.webp:
-  // {
-  //   title: "Creative Works Co.",
-  //   url: "https://web-production-828036a0.up.railway.app/",
-  //   kind: "Website",
-  //   accent: "#7B6CF6",
-  //   image: "/work/creative-works.webp",
-  // },
+  {
+    title: "Creative Works Co.",
+    url: "https://web-production-828036a0.up.railway.app/",
+    kind: "Video & photo studio · NZ",
+    accent: "#22B8CF",
+    image: "/work/creative-works.webp",
+  },
   {
     title: "Checklist.lk",
     url: "https://ckqfwhcrievgrv.checklist.lk/",
@@ -547,14 +544,13 @@ export const SHOWCASE: ShowcaseSite[] = [
     image: "/work/back2fit.webp",
     project: "back2fit",
   },
-  // Add back once its screenshot is saved as public/work/fintra-finance.webp:
-  // {
-  //   title: "Fintra Finance",
-  //   url: "https://fintrafinance.com.au",
-  //   kind: "Finance · Australia",
-  //   accent: "#2FB5A0",
-  //   image: "/work/fintra-finance.webp",
-  // },
+  {
+    title: "Fintra Finance",
+    url: "https://fintrafinance.com.au",
+    kind: "Finance broker · Australia",
+    accent: "#F5C431",
+    image: "/work/fintra-finance.webp",
+  },
 ];
 
 export const PROCESS = [

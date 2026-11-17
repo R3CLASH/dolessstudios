@@ -116,7 +116,7 @@ export function SiteWheel() {
               </SplitReveal>
             </div>
             <p className="pointer-events-auto hidden max-w-sm text-paper/70 md:block">
-              Car dealers to perfume stores to boxing gyms. Keep scrolling to spin through sites we designed and built.
+              Car dealers to film crews, perfume to finance. Keep scrolling to spin through sites we designed and built.
             </p>
           </div>
 
@@ -269,7 +269,7 @@ function SiteInfo({ site, active }: { site: ShowcaseSite; active: number }) {
             · {site.kind}
           </span>
         </div>
-        <h3 className="display heavy mt-2 overflow-hidden pb-[0.08em] text-[clamp(1.7rem,3.2vw,3rem)]">
+        <h3 className="display heavy mt-2 overflow-hidden pb-[0.08em] text-[clamp(1.4rem,3.2vw,3rem)]">
           <span key={active} className="swap-in block truncate">
             {site.title}
           </span>
