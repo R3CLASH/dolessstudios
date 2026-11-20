@@ -1,0 +1,159 @@
+# Owns infra/ — the AWS shape, not the app. Nothing here builds or deploys application code;
+# .github/workflows/deploy.yml does that and never runs Terraform.
+#
+# PRs get fmt + validate with NO AWS credentials (this repo is public, and anything that can read
+# prod/terraform.tfstate can read smtp_pass and database_url in plaintext). Applying is deliberate:
+# run this workflow by hand, read the plan in the run summary, and the apply follows it.
+#
+# One-time setup: README.md → "Deploying to AWS".
+name: Infra
+on:
+  pull_request:
+    paths:
+      - infra/**
+      - public/** # public_paths in infra/cdn.tf turns these into CloudFront behaviors
+  workflow_dispatch:
+
+permissions:
+  id-token: write # GitHub OIDC → AWS
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "1"
+  TF_VERSION: "~1.17"
+
+jobs:
+  # No credentials, no secrets, no backend — so this also works on fork PRs.
+  validate:
+    runs-on: ubuntu-latest
+    # Deliberately NOT in the deploy-production group: only one run may be pending per group, and
+    # queueing another cancels the pending one, so a PR check here could cancel a queued apply.
+    concurrency:
+      group: infra-validate-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - run: terraform fmt -check -recursive infra/
+
+      # -backend=false: no state access, so no credentials are needed.
+      - run: terraform -chdir=infra init -backend=false -input=false
+
+      - run: terraform -chdir=infra validate
+
+  plan:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    concurrency:
+      group: infra-plan
+      cancel-in-progress: false
+    env:
+      AWS_REGION: us-east-1
+      TF_VAR_smtp_user: ${{ vars.SMTP_USER }}
+      TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
+      TF_VAR_contact_from_email: ${{ vars.CONTACT_FROM_EMAIL }}
+      TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+    steps:
+      # The deploy role trusts refs/heads/main and the production environment, nothing else. This job
+      # has no environment, so off main it dies inside the AWS login with an opaque STS error instead.
+      - name: Check ref
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Infra can only be applied from main (the deploy role trusts refs/heads/main). Got $GITHUB_REF."
+            exit 1
+          fi
+
+      - name: Check deploy configuration
+        env:
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+        run: |
+          if [ -z "$AWS_ROLE_ARN" ]; then
+            echo "::error::AWS_ROLE_ARN (variable) isn't visible to this job. Add it to the 'production' environment (or the repository) under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          if [ -z "$TF_VAR_smtp_user" ] || [ -z "$TF_VAR_smtp_pass" ]; then
+            echo "::warning::SMTP_USER (variable) or SMTP_PASS (secret) isn't set, so the contact form can't email briefs and will tell visitors it didn't send."
+          fi
+          case "$AWS_ROLE_ARN" in
+            */doless-gha-deploy) ;;
+            *) echo "::warning::AWS_ROLE_ARN is $AWS_ROLE_ARN; the role infra/bootstrap.sh set up is doless-gha-deploy." ;;
+          esac
+
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - run: terraform -chdir=infra init -input=false
+
+      # Into the summary, never an artifact: artifacts on a public repo are publicly downloadable
+      # and a saved plan file embeds variable values in plaintext.
+      - name: Plan
+        run: |
+          set -o pipefail
+          terraform -chdir=infra plan -input=false -no-color 2>&1 | tee "$RUNNER_TEMP/plan.txt"
+          {
+            echo '### Terraform plan'
+            echo '```terraform'
+            tail -c 900000 "$RUNNER_TEMP/plan.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    # The 'production' environment is what the deploy role's trust policy allows, and it holds the
+    # secrets below. NOTE: adding required reviewers here would also gate every code deploy, since
+    # deploy.yml needs this same environment for DATABASE_URL. To review infra only, make a separate
+    # environment and add repo:<owner>/<repo>:environment:<name> to the trust in infra/bootstrap.sh.
+    environment: production
+    # Serialized against the code deploy: both mutate production.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false # never interrupt a terraform apply
+    env:
+      AWS_REGION: us-east-1
+      TF_VAR_smtp_user: ${{ vars.SMTP_USER }}
+      TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
+      TF_VAR_contact_from_email: ${{ vars.CONTACT_FROM_EMAIL }}
+      TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - run: terraform -chdir=infra init -input=false
+
+      # Re-planned rather than applying a saved plan, for the artifact reason above. The window
+      # between the plan job and here is covered by this being a manual, serialized run.
+      - run: terraform -chdir=infra apply -input=false -auto-approve
+
+      - name: Summary
+        run: |
+          {
+            echo "Applied. Site: $(terraform -chdir=infra output -raw site_url)"
+            echo ""
+            echo "Lambda code is NOT managed here. If this run created or replaced a function it is"
+            echo "serving the 503 placeholder until the Deploy workflow runs."
+          } >> "$GITHUB_STEP_SUMMARY"

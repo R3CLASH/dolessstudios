@@ -4,10 +4,13 @@
 # The bucket holds OpenNext's build output, uploaded by the deploy workflow:
 #   _assets/  .open-next/assets (hashed /_next/static and public/), CloudFront's S3 origin path
 #   _cache/   .open-next/cache (prerendered pages per build ID), read by the server function
+#   _lambda/  the Lambda bundles, keyed by commit SHA, so a rollback needs no rebuild. Not reachable
+#             from CloudFront: the bucket policy below grants OAC access to _assets/* only, and the
+#             S3 origin's origin_path is /_assets. Expired after 30 days (lifecycle rule below).
 
 resource "aws_s3_bucket" "site" {
   bucket        = "${local.name}-site-${data.aws_caller_identity.current.account_id}"
-  force_destroy = true # only build output; every deploy re-uploads it
+  force_destroy = true # build output and deploy artifacts only; every deploy re-uploads them
 }
 
 resource "aws_s3_bucket_public_access_block" "site" {
@@ -16,6 +19,28 @@ resource "aws_s3_bucket_public_access_block" "site" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+# Deploy artifacts are only needed for as long as a rollback might reach for them.
+resource "aws_s3_bucket_lifecycle_configuration" "site" {
+  bucket = aws_s3_bucket.site.id
+
+  rule {
+    id     = "expire-lambda-bundles"
+    status = "Enabled"
+
+    filter {
+      prefix = "_lambda/"
+    }
+
+    expiration {
+      days = 30
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
 }
 
 resource "aws_s3_bucket_policy" "site" {
@@ -122,11 +147,14 @@ locals {
   api_domain = trimprefix(aws_apigatewayv2_api.site.api_endpoint, "https://")
 
   # One behavior per top-level entry in public/, like the routes OpenNext lists in open-next.output.json.
+  # Read from public/ in the repo rather than the build output, so `terraform plan` needs no build —
+  # OpenNext copies public/ to the root of .open-next/assets, so the two give the same list.
   # Folders only match names with an extension: public/work/*.webp shares /work/ with the /work/[slug] pages.
+  # Dotfiles are skipped so a stray (gitignored) public/.DS_Store can't make a local plan diverge from CI.
   public_paths = distinct([
-    for f in fileset("${local.open_next}/assets", "**") :
+    for f in fileset("${path.module}/../public", "**") :
     (strcontains(f, "/") ? "/${split("/", f)[0]}/*.*" : "/${f}")
-    if !startswith(f, "_next/") && f != "BUILD_ID"
+    if !startswith(f, ".")
   ])
 }
 

@@ -1,13 +1,15 @@
-# Deploys main to AWS (infra/). One-time setup: README.md → "Deploying to AWS".
+# Deploys the APP to AWS on every push to main. Infrastructure lives in .github/workflows/infra.yml
+# and is applied by hand; nothing here runs Terraform.
+#
+# What it needs from infra (bucket, distribution, function names, site URL) comes from the SSM
+# parameter that `terraform apply` writes — see aws_ssm_parameter.deploy_targets in infra/outputs.tf.
+#
+# One-time setup: README.md → "Deploying to AWS".
 name: Deploy
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
-concurrency:
-  group: deploy-production
-  cancel-in-progress: false # never interrupt a terraform apply
 
 permissions:
   id-token: write # GitHub OIDC → AWS
@@ -21,27 +23,24 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     environment: production
+    # On the job, not the workflow: otherwise the `check` job above (npm ci + typecheck + build)
+    # holds the production lock for minutes without touching AWS. Shared with infra.yml's apply.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     env:
       AWS_REGION: us-east-1
-      TF_IN_AUTOMATION: "1"
       NEXT_TELEMETRY_DISABLED: "1"
-      TF_VAR_smtp_user: ${{ vars.SMTP_USER }}
-      TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
-      TF_VAR_contact_from_email: ${{ vars.CONTACT_FROM_EMAIL }}
-      TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+      SSM_PARAMETER: /doless/deploy-targets
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
-      # Fails in seconds, by name, instead of deep inside the AWS login or terraform apply.
+      # Fails in seconds, by name, instead of deep inside the AWS login.
       - name: Check deploy configuration
         env:
           AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
         run: |
-          missing=""
-          [ -n "$AWS_ROLE_ARN" ] || missing="$missing AWS_ROLE_ARN(variable)"
-          if [ -z "$TF_VAR_smtp_user" ] || [ -z "$TF_VAR_smtp_pass" ]; then
-            echo "::warning::SMTP_USER (variable) or SMTP_PASS (secret) isn't set, so the contact form can't email briefs and will tell visitors it didn't send."
-          fi
-          if [ -n "$missing" ]; then
-            echo "::error::Not visible to this job:$missing. Add them to the 'production' environment (or the repository) under Settings → Secrets and variables → Actions."
+          if [ -z "$AWS_ROLE_ARN" ]; then
+            echo "::error::AWS_ROLE_ARN (variable) isn't visible to this job. Add it to the 'production' environment (or the repository) under Settings → Secrets and variables → Actions."
             exit 1
           fi
           case "$AWS_ROLE_ARN" in
@@ -63,55 +62,94 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "~1.17"
-          terraform_wrapper: false # keep `terraform output -raw` clean
-
-      - name: Terraform init
-        run: terraform -chdir=infra init -input=false
-
-      # The site URL is baked into the build (metadata, sitemap, Open Graph). Before the first deploy there's no
-      # CloudFront domain yet; that run builds twice (see below).
-      - name: Resolve site URL
+      - name: Read deploy targets
         run: |
-          url=$(terraform -chdir=infra output -raw site_url 2>/dev/null || true)
-          echo "SITE_URL=$url" >> "$GITHUB_ENV"
+          set -euo pipefail
+          if ! targets=$(aws ssm get-parameter --name "$SSM_PARAMETER" \
+                           --query Parameter.Value --output text 2>/dev/null); then
+            echo "::error::$SSM_PARAMETER not found. Run the Infra workflow (apply) once before deploying code."
+            exit 1
+          fi
+          printf '%s' "$targets" > "$RUNNER_TEMP/targets.json"
+          for k in site_url site_bucket cloudfront_distribution_id server_function image_function; do
+            v=$(jq -er --arg k "$k" '.[$k]' "$RUNNER_TEMP/targets.json") || {
+              echo "::error::$SSM_PARAMETER is missing '$k'. Re-run the Infra workflow (apply)."
+              exit 1
+            }
+            echo "$(echo "$k" | tr '[:lower:]' '[:upper:]')=$v" >> "$GITHUB_ENV"
+          done
 
+      # Infra is applied by hand while this runs automatically, so a commit touching both can land
+      # here first. A new top-level public/ folder without its CloudFront behavior falls through to
+      # the server function, which does not contain public/ — i.e. silent 404s. Catch it before the
+      # build rather than after the deploy.
+      - name: Check public/ against the applied CloudFront behaviors
+        run: |
+          set -euo pipefail
+          shopt -s nullglob # an unmatched public/* must expand to nothing, not to the literal glob
+          have=$(for f in public/*; do
+                   b=$(basename "$f")
+                   if [ -d "$f" ]; then echo "/$b/*.*"; else echo "/$b"; fi
+                 done | sort -u | paste -sd, -)
+          want=$(jq -r '.public_paths | sort | join(",")' "$RUNNER_TEMP/targets.json")
+          if [ "$have" != "$want" ]; then
+            echo "::error::public/ resolves to ($have) but the applied CloudFront behaviors are ($want). Dispatch the Infra workflow (apply) first."
+            exit 1
+          fi
+
+      # The site URL is baked into the build (metadata, sitemap, Open Graph).
       - name: Build app and Lambda bundles
         run: NEXT_PUBLIC_SITE_URL="$SITE_URL" npm run build:aws
 
-      # Upload before the new server goes live, so its pages never point at files that aren't there yet.
-      # Skipped on the very first deploy (no bucket yet).
-      - name: Upload build output (pre-deploy)
-        run: |
-          bucket=$(terraform -chdir=infra output -raw site_bucket 2>/dev/null || true)
-          if [ -n "$bucket" ]; then infra/upload.sh "$bucket"; fi
-
-      - name: Terraform apply
-        run: terraform -chdir=infra apply -input=false -auto-approve
-
-      - name: Rebuild with the CloudFront URL (first deploy only)
-        if: env.SITE_URL == ''
-        run: |
-          url=$(terraform -chdir=infra output -raw site_url)
-          echo "SITE_URL=$url" >> "$GITHUB_ENV"
-          NEXT_PUBLIC_SITE_URL="$url" npm run build:aws
-          infra/upload.sh "$(terraform -chdir=infra output -raw site_bucket)"
-          terraform -chdir=infra apply -input=false -auto-approve
-
+      # Before the new code goes live, so its pages never point at files that aren't there yet.
       - name: Upload build output
-        run: infra/upload.sh "$(terraform -chdir=infra output -raw site_bucket)"
+        run: infra/upload.sh "$SITE_BUCKET"
 
+      # Ahead of the code update on purpose: old code against the new schema is the safe direction.
+      # The corollary is that migrations must stay backwards-compatible with the running code —
+      # drizzle-kit is forward-only, there is nothing to roll back to.
       - name: Run database migrations
-        if: env.TF_VAR_database_url != ''
-        run: DATABASE_URL="$TF_VAR_database_url" npm run db:migrate
+        if: env.DATABASE_URL != ''
+        run: npm run db:migrate
+
+      # Keyed by commit so a rollback needs no rebuild: point both functions back at an older SHA's
+      # zips and invalidate. The old build's _next/ chunks and _cache/ entries are still in S3,
+      # because infra/upload.sh never deletes.
+      - name: Ship Lambda bundles
+        run: |
+          set -euo pipefail
+          prefix="_lambda/$GITHUB_SHA"
+          (cd .open-next/server-functions/default && zip -qr "$RUNNER_TEMP/server.zip" .)
+          (cd .open-next/image-optimization-function && zip -qr "$RUNNER_TEMP/image.zip" .)
+          aws s3 cp "$RUNNER_TEMP/server.zip" "s3://$SITE_BUCKET/$prefix/server.zip" --only-show-errors
+          aws s3 cp "$RUNNER_TEMP/image.zip" "s3://$SITE_BUCKET/$prefix/image.zip" --only-show-errors
+
+          # A concurrent `terraform apply` — including from a laptop — makes this return
+          # ResourceConflictException while the function is already updating.
+          ship() {
+            for attempt in 1 2 3; do
+              if aws lambda update-function-code --function-name "$1" \
+                   --s3-bucket "$SITE_BUCKET" --s3-key "$2" >/dev/null; then
+                return 0
+              fi
+              echo "::warning::update-function-code on $1 failed (attempt $attempt/3); retrying in 15s"
+              sleep 15
+            done
+            echo "::error::Could not update $1 after 3 attempts."
+            return 1
+          }
+          ship "$SERVER_FUNCTION" "$prefix/server.zip"
+          ship "$IMAGE_FUNCTION" "$prefix/image.zip"
+
+          # Both must settle before the invalidation, or the edge refills from the old code.
+          aws lambda wait function-updated-v2 --function-name "$SERVER_FUNCTION"
+          aws lambda wait function-updated-v2 --function-name "$IMAGE_FUNCTION"
 
       # Prerendered pages are cached at the edge until the next deploy; this is that point.
       - name: Invalidate CloudFront
         run: |
           aws cloudfront create-invalidation --paths "/*" \
-            --distribution-id "$(terraform -chdir=infra output -raw cloudfront_distribution_id)" >/dev/null
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" >/dev/null
 
       - name: Summary
-        run: echo "Deployed to $(terraform -chdir=infra output -raw site_url)" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "Deployed $GITHUB_SHA to $SITE_URL" >> "$GITHUB_STEP_SUMMARY"

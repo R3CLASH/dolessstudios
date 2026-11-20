@@ -65,9 +65,16 @@ Search the code for `[` to find placeholders:
 
 ## Deploying to AWS
 
-`main` deploys itself through GitHub Actions ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) with
-Terraform ([`infra/`](infra/)), into account `349631302124`, region `us-east-1`. [OpenNext](https://opennext.js.org)
-(`open-next.config.ts`) turns the Next.js build into Lambda bundles:
+Infrastructure and application code deploy through **two separate workflows**, into account
+`349631302124`, region `us-east-1`:
+
+| | [`.github/workflows/infra.yml`](.github/workflows/infra.yml) | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) |
+|---|---|---|
+| Owns | [`infra/`](infra/) — the AWS shape | the app: assets, Lambda code, DB schema |
+| Runs | `fmt`/`validate` on PRs; apply by hand (**Run workflow**) | automatically on every push to `main` |
+| Terraform | yes | **never** |
+
+[OpenNext](https://opennext.js.org) (`open-next.config.ts`) turns the Next.js build into Lambda bundles:
 
 ```
 CloudFront ─┬─ /_next/static/*, /work/* (public/)  → S3 "_assets/"
@@ -77,8 +84,22 @@ CloudFront ─┬─ /_next/static/*, /work/* (public/)  → S3 "_assets/"
 ```
 
 Pages are prerendered at build time and cached at the edge until the next deploy, which invalidates CloudFront.
-The site URL (`NEXT_PUBLIC_SITE_URL`) is baked into the build: the custom domain if set, otherwise the CloudFront
-domain, so the very first deploy builds twice.
+The site URL (`NEXT_PUBLIC_SITE_URL`) is baked into the build.
+
+**Terraform does not own the Lambda code.** It creates both functions from `infra/placeholder/` (which answers 503)
+and then ignores the code attributes, so a plan needs no build and a code deploy needs no apply. `deploy.yml` ships
+the real bundles with `aws lambda update-function-code`. The consequence: a function that Terraform has just created
+or *replaced* serves 503 until `deploy.yml` runs.
+
+**How the workflows talk to each other.** `terraform apply` writes one JSON SSM parameter,
+`/doless/deploy-targets` (`aws_ssm_parameter.deploy_targets` in `infra/outputs.tf`), holding the bucket,
+distribution id, site URL, function names and the CloudFront `public_paths`. `deploy.yml` reads it instead of
+running `terraform output`. If it is missing, the deploy fails with a message telling you to apply infra first.
+
+**Order matters for a commit that changes both.** Infra is applied by hand while code deploys itself, so apply
+infra *first*. `deploy.yml` guards the case it can detect — a new top-level folder in `public/` without its
+CloudFront behavior — and fails before building. A new Lambda environment variable is **not** guarded; apply infra
+before merging code that needs one.
 
 One-time setup:
 
@@ -90,7 +111,34 @@ One-time setup:
      them, with a warning, but briefs and newsletter sign-ups can't reach you until they're set.
    - optional: variable `CONTACT_FROM_EMAIL`; secret `DATABASE_URL` (Neon, Supabase or any Postgres; migrations run
      on deploy; without it briefs and sign-ups are only emailed).
-3. Push to `main` (or run the workflow by hand). The run summary shows the site URL.
+3. Run **Infra** → *Run workflow* on `main`. Read the plan in the run summary; the apply follows it.
+4. Push to `main` (or run **Deploy** by hand) to put the real code on the Lambdas. The run summary shows the site URL.
+
+Steps 3 and 4 are also the recovery order if a function ever gets replaced.
+
+Infra can only be applied from `main`: the role's trust policy allows `refs/heads/main` and the `production`
+environment, nothing else, and the workflow fails fast rather than dying inside the AWS login. PR checks run
+`fmt`/`validate` with **no AWS credentials at all** — this repo is public, and anything that can read
+`prod/terraform.tfstate` can read `smtp_pass` and `database_url` in plaintext, since Terraform stores variable
+values there unencrypted whatever `sensitive = true` says. For the same reason no plan is ever uploaded as an
+artifact. If you want a second pair of eyes on infra, do **not** add required reviewers to `production` — that
+would gate every code deploy too, because `deploy.yml` needs that environment for `DATABASE_URL`. Create a
+separate environment and add `repo:<owner>/<repo>:environment:<name>` to the trust policy in `infra/bootstrap.sh`.
+
+**Rolling back code** needs no rebuild. Bundles are kept at `s3://<site bucket>/_lambda/<commit sha>/` for 30 days,
+and `infra/upload.sh` never deletes, so the previous build's `_next/` chunks and `_cache/` entries are still there:
+
+```
+aws lambda update-function-code --function-name doless-server \
+  --s3-bucket <site bucket> --s3-key _lambda/<old sha>/server.zip
+aws lambda update-function-code --function-name doless-image \
+  --s3-bucket <site bucket> --s3-key _lambda/<old sha>/image.zip
+aws cloudfront create-invalidation --distribution-id <id> --paths "/*"
+```
+
+Migrations are **not** covered by that: `drizzle-kit` is forward-only, so a migration must stay
+backwards-compatible with the code it may be rolled back to. `deploy.yml` runs migrations *before* updating the
+Lambda code for the same reason — old code against the new schema is the safe direction.
 
 The custom domain is **not** a GitHub variable — it lives in `infra/variables.tf`, so it is visible in review:
 `domain_name` (the root domain) and `acm_certificate_arn`. The distribution serves the apex and `www`, and
@@ -103,9 +151,10 @@ distribution from `terraform -chdir=infra output cloudfront_distribution_id`: th
 `<id>.cloudfront.net` (Cloudflare flattens it at the root) and `www` is a CNAME to the same name. Proxying either
 record through Cloudflare would put a second TLS hop in front of CloudFront and needs SSL mode Full (strict).
 
-Local plan: `npm run build:aws && AWS_PROFILE=thavisha terraform -chdir=infra init && AWS_PROFILE=thavisha terraform -chdir=infra plan`
-(with `TF_VAR_smtp_user` / `TF_VAR_smtp_pass` set). Builds pick up a local `.env`, so deploy from CI rather than from a
-machine that has one.
+Local plan — no build needed, nothing in `infra/` reads the build output any more:
+`AWS_PROFILE=thavisha terraform -chdir=infra init && AWS_PROFILE=thavisha terraform -chdir=infra plan`
+(with `TF_VAR_smtp_user` / `TF_VAR_smtp_pass` set). Builds pick up a local `.env`, so deploy from CI rather than
+from a machine that has one.
 
 The rate limiter in `lib/actions.ts` is in-memory per Lambda instance; swap for Upstash or similar if you need it to be
 global.
