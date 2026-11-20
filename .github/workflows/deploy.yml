@@ -29,8 +29,6 @@ jobs:
       TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
       TF_VAR_contact_from_email: ${{ vars.CONTACT_FROM_EMAIL }}
       TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
-      TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
-      TF_VAR_acm_certificate_arn: ${{ vars.ACM_CERTIFICATE_ARN }}
     steps:
       # Fails in seconds, by name, instead of deep inside the AWS login or terraform apply.
       - name: Check deploy configuration
@@ -77,9 +75,7 @@ jobs:
       # CloudFront domain yet; that run builds twice (see below).
       - name: Resolve site URL
         run: |
-          url=""
-          [ -z "$TF_VAR_domain_name" ] || url="https://$TF_VAR_domain_name"
-          [ -n "$url" ] || url=$(terraform -chdir=infra output -raw site_url 2>/dev/null || true)
+          url=$(terraform -chdir=infra output -raw site_url 2>/dev/null || true)
           echo "SITE_URL=$url" >> "$GITHUB_ENV"
 
       - name: Build app and Lambda bundles

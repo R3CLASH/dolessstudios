@@ -136,7 +136,7 @@ resource "aws_cloudfront_distribution" "site" {
   http_version    = "http2and3"
   comment         = "Do Less Studios"
   price_class     = "PriceClass_100"
-  aliases         = var.domain_name != "" ? [var.domain_name] : []
+  aliases         = local.site_hosts
 
   origin {
     origin_id                = "s3"
@@ -227,6 +227,10 @@ resource "aws_cloudfront_distribution" "site" {
     precondition {
       condition     = (var.domain_name == "") == (var.acm_certificate_arn == "")
       error_message = "Set domain_name and acm_certificate_arn together."
+    }
+    precondition {
+      condition     = var.acm_certificate_arn == "" || startswith(var.acm_certificate_arn, "arn:aws:acm:us-east-1:")
+      error_message = "CloudFront requires the ACM certificate in us-east-1."
     }
   }
 }

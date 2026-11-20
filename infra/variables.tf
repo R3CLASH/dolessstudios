@@ -4,15 +4,27 @@ variable "aws_region" {
 }
 
 variable "domain_name" {
-  description = "Custom domain, e.g. dolessstudios.com. Empty serves the site on the CloudFront domain."
+  description = "Root domain, e.g. dolessstudios.com. Both it and www.<domain> are served. Empty serves the site on the CloudFront domain."
   type        = string
-  default     = ""
+  default     = "dolessstudios.com"
 }
 
-variable "acm_certificate_arn" {
-  description = "us-east-1 ACM certificate for domain_name. Required with domain_name."
+variable "canonical_host" {
+  description = "Which hostname is canonical and baked into NEXT_PUBLIC_SITE_URL: \"www\" or \"apex\"."
   type        = string
-  default     = ""
+  default     = "www"
+
+  validation {
+    condition     = contains(["www", "apex"], var.canonical_host)
+    error_message = "canonical_host must be \"www\" or \"apex\"."
+  }
+}
+
+# A *.<domain> wildcard does NOT cover the apex, so a wildcard-only certificate cannot serve dolessstudios.com.
+variable "acm_certificate_arn" {
+  description = "us-east-1 ACM certificate covering BOTH the apex and www. Required with domain_name."
+  type        = string
+  default     = "arn:aws:acm:us-east-1:349631302124:certificate/7440c36e-04f2-4d68-9d66-2bfa418e440d"
 }
 
 # Contact form email (src/lib/mail.ts). Without SMTP_USER/SMTP_PASS briefs only reach the database, if there is one.

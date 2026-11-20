@@ -45,6 +45,10 @@ locals {
   name      = "doless"
   open_next = "${path.module}/../.open-next"
 
+  # The distribution serves the apex and www; canonical_host picks which one the build is baked against.
+  site_hosts     = var.domain_name == "" ? [] : [var.domain_name, "www.${var.domain_name}"]
+  canonical_host = var.canonical_host == "www" ? "www.${var.domain_name}" : var.domain_name
+
   # Without a custom domain the site lives on the CloudFront domain.
-  site_url = var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.site.domain_name}"
+  site_url = var.domain_name != "" ? "https://${local.canonical_host}" : "https://${aws_cloudfront_distribution.site.domain_name}"
 }
