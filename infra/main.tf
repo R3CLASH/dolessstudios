@@ -1,8 +1,15 @@
 # Do Less Studios on AWS: CloudFront → S3 (static files) + API Gateway (HTTP API) → Lambda (Next.js server and
-# image optimizer), built with OpenNext (open-next.config.ts). Deployed by .github/workflows/deploy.yml.
+# image optimizer), built with OpenNext (open-next.config.ts).
+#
+# Two workflows, deliberately split:
+#   .github/workflows/infra.yml   this directory. Validated on PRs, applied by hand (workflow_dispatch).
+#   .github/workflows/deploy.yml  the app. Runs on every push to main and never invokes Terraform; it
+#                                 reads what it needs from the SSM parameter in outputs.tf.
+#
+# Nothing here depends on build output, so a plan needs no `npm run build:aws`. Keep it that way.
 #
 # The state bucket and the GitHub Actions role are created once by ./bootstrap.sh.
-# Local runs: AWS_PROFILE=thavisha terraform -chdir=infra plan (after `npm run build:aws`).
+# Local runs: AWS_PROFILE=thavisha terraform -chdir=infra plan
 
 terraform {
   required_version = ">= 1.10"
@@ -42,8 +49,7 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 locals {
-  name      = "doless"
-  open_next = "${path.module}/../.open-next"
+  name = "doless"
 
   # The distribution serves the apex and www; canonical_host picks which one the build is baked against.
   site_hosts     = var.domain_name == "" ? [] : [var.domain_name, "www.${var.domain_name}"]

@@ -1,14 +1,13 @@
-# Both bundles come from `npm run build:aws` (OpenNext, see open-next.config.ts).
-data "archive_file" "server" {
+# This file owns the SHAPE of both functions (runtime, memory, env, routing) — never their code.
+#
+# The real bundles come from `npm run build:aws` (OpenNext, see open-next.config.ts) and are shipped
+# by .github/workflows/deploy.yml with `aws lambda update-function-code`. Terraform creates each
+# function from the placeholder below and then ignores the code attributes, so `terraform plan`
+# needs no build and a code deploy needs no apply.
+data "archive_file" "placeholder" {
   type        = "zip"
-  source_dir  = "${local.open_next}/server-functions/default"
-  output_path = "${path.module}/.build/server.zip"
-}
-
-data "archive_file" "image" {
-  type        = "zip"
-  source_dir  = "${local.open_next}/image-optimization-function"
-  output_path = "${path.module}/.build/image.zip"
+  source_dir  = "${path.module}/placeholder"
+  output_path = "${path.module}/.build/placeholder.zip"
 }
 
 locals {
@@ -44,13 +43,23 @@ resource "aws_lambda_function" "server" {
   runtime          = "nodejs24.x"
   architectures    = ["arm64"]
   handler          = "index.handler"
-  filename         = data.archive_file.server.output_path
-  source_code_hash = data.archive_file.server.output_base64sha256
+  filename         = data.archive_file.placeholder.output_path
+  source_code_hash = data.archive_file.placeholder.output_base64sha256
   memory_size      = 1024
   timeout          = 30 # API Gateway gives up at 30s anyway
 
   environment {
     variables = local.server_env
+  }
+
+  # Code is shipped out of band (see the header). Because it is ignored here, ANY replacement of
+  # this resource — -replace, taint, rename — resurrects the placeholder's 503; heal by re-running
+  # the Deploy workflow. `runtime` and `architectures` are carried by CreateFunction and
+  # UpdateFunctionCode rather than UpdateFunctionConfiguration, so changing either also needs a
+  # Deploy run immediately after. Never add `publish` or an alias: versioning fights out-of-band
+  # code updates, and the aws_lambda_permission blocks below target the unqualified name.
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
   }
 
   depends_on = [aws_cloudwatch_log_group.server, aws_iam_role_policy.lambda]
@@ -69,8 +78,8 @@ resource "aws_lambda_function" "image" {
   runtime          = "nodejs24.x"
   architectures    = ["arm64"] # OpenNext installs sharp for linux-arm64
   handler          = "index.handler"
-  filename         = data.archive_file.image.output_path
-  source_code_hash = data.archive_file.image.output_base64sha256
+  filename         = data.archive_file.placeholder.output_path
+  source_code_hash = data.archive_file.placeholder.output_base64sha256
   memory_size      = 1536
   timeout          = 30
 
@@ -79,6 +88,11 @@ resource "aws_lambda_function" "image" {
       BUCKET_NAME       = aws_s3_bucket.site.bucket
       BUCKET_KEY_PREFIX = "_assets"
     }
+  }
+
+  # Same as the server function above: code is shipped by the Deploy workflow, not Terraform.
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
   }
 
   depends_on = [aws_cloudwatch_log_group.image, aws_iam_role_policy.lambda]

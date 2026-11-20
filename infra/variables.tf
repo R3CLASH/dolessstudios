@@ -39,9 +39,11 @@ variable "smtp_port" {
   default = "465"
 }
 
+# sensitive so it stays out of plan output: this repo is public, and so are its Actions logs.
 variable "smtp_user" {
-  type    = string
-  default = ""
+  type      = string
+  default   = ""
+  sensitive = true
 }
 
 variable "smtp_pass" {
@@ -60,6 +62,7 @@ variable "contact_from_email" {
   description = "Optional. Defaults to \"Do Less Studios <smtp_user>\"."
   type        = string
   default     = ""
+  sensitive   = true
 }
 
 variable "database_url" {
