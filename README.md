@@ -89,9 +89,19 @@ One-time setup:
    - variable `SMTP_USER` and secret `SMTP_PASS` (the Gmail address and its App Password). The deploy runs without
      them, with a warning, but briefs and newsletter sign-ups can't reach you until they're set.
    - optional: variable `CONTACT_FROM_EMAIL`; secret `DATABASE_URL` (Neon, Supabase or any Postgres; migrations run
-     on deploy; without it briefs and sign-ups are only emailed); variables `DOMAIN_NAME` +
-     `ACM_CERTIFICATE_ARN` (a us-east-1 certificate) for a custom domain.
+     on deploy; without it briefs and sign-ups are only emailed).
 3. Push to `main` (or run the workflow by hand). The run summary shows the site URL.
+
+The custom domain is **not** a GitHub variable — it lives in `infra/variables.tf`, so it is visible in review:
+`domain_name` (the root domain) and `acm_certificate_arn`. The distribution serves the apex and `www`, and
+`canonical_host` ("www" or "apex") picks the one baked into `NEXT_PUBLIC_SITE_URL`. The certificate must be in
+us-east-1 and cover **both** hostnames: a `*.<domain>` wildcard does not match the bare apex, so a wildcard-only
+certificate cannot serve `dolessstudios.com`.
+
+DNS is on Cloudflare and is not managed by Terraform. Both records are DNS-only (grey cloud), pointing at the
+distribution from `terraform -chdir=infra output cloudfront_distribution_id`: the apex is a CNAME to
+`<id>.cloudfront.net` (Cloudflare flattens it at the root) and `www` is a CNAME to the same name. Proxying either
+record through Cloudflare would put a second TLS hop in front of CloudFront and needs SSL mode Full (strict).
 
 Local plan: `npm run build:aws && AWS_PROFILE=thavisha terraform -chdir=infra init && AWS_PROFILE=thavisha terraform -chdir=infra plan`
 (with `TF_VAR_smtp_user` / `TF_VAR_smtp_pass` set). Builds pick up a local `.env`, so deploy from CI rather than from a
