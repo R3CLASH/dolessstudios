@@ -8,7 +8,7 @@ type Size = "desktop" | "phone";
  * The live demo, in a browser mock, with a phone/desktop toggle.
  *
  * The iframe is same-origin but the demo is a separate root layout, so it loads
- * none of this page's shell. It is kept lazy so four of these on a catalog page
+ * none of this page's shell. It is kept lazy so a page full of these
  * would still be cheap, and the whole frame is scrollable inside itself.
  */
 export function DemoFrame({ path, host, accent, title }: { path: string; host: string; accent: string; title: string }) {

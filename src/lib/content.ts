@@ -195,7 +195,7 @@ export const getService = (slug: string) => SERVICES.find((s) => s.slug === slug
    Money is always integer minor units of LKR — see src/lib/money.ts.
    Anything in [square brackets] is a placeholder to replace before launch. */
 
-export type SolutionSlug = "trades" | "restaurant" | "clinic" | "startup";
+export type SolutionSlug = "trades" | "restaurant" | "clinic" | "stay" | "classes" | "supplier";
 
 /** What a solution does. Drives the catalog filter pills, not the verticals. */
 export type SolutionTag = "leads" | "bookings" | "payments" | "menu" | "ai";
@@ -377,45 +377,131 @@ export const SOLUTIONS: Solution[] = [
     ],
   },
   {
-    slug: "startup",
+    slug: "stay",
     index: "04",
-    vertical: "Startups & SaaS",
-    title: "The Launch",
-    tagline: "One page that explains it and collects the email.",
+    vertical: "Hotels & villas",
+    title: "The Stay",
+    tagline: "Direct bookings, without the commission.",
     intro:
-      "For the week you need to be live and have nothing to show but a clear idea. Hero, the problem, how you solve it, pricing, and a signup that works before the product does.",
-    forWho: ["Pre-launch SaaS", "Side projects", "Agencies", "Indie apps", "Waitlists", "Pitch pages"],
-    tags: ["leads", "payments", "ai"],
-    pages: ["Hero & problem", "How it works", "Features", "Pricing", "FAQ", "Waitlist or signup", "Thanks"],
+      "Booking.com brought you the guest and kept a fifth of the rate. This is the page that takes the next one directly: rooms and rates, what is within walking distance, and an enquiry that reaches you before the guest closes the tab.",
+    forWho: ["Boutique hotels", "Villas", "Guesthouses", "Homestays", "Eco lodges", "Surf camps"],
+    tags: ["bookings", "leads", "ai"],
+    pages: ["Home", "Rooms & rates", "Gallery", "What's nearby", "Getting here", "Enquire", "Thanks"],
     features: [
-      "Pricing table built from your plans",
-      "Waitlist capture that stores every signup",
-      "Open Graph cards so links look right when shared",
-      "Analytics and conversion goals wired up",
-      "Scores green on Core Web Vitals out of the box",
-      "Ready for a payment link the day you have something to sell",
+      "Room pages with rates by season, in rupees or dollars",
+      "Enquiry form that asks the dates and the headcount first",
+      "Gallery that still loads on hotel wifi in another country",
+      "Your Google and TripAdvisor reviews, on your own page",
+      "Directions, transfers and the map, written for a stranger",
+      "English first, with a second language when you need it",
     ],
     offYourPlate: [
-      "Wrestling a page builder at 1am",
-      "Paying monthly for a landing-page tool",
-      "Wondering why the link preview is blank",
-      "Rebuilding the page when the pitch changes",
+      "Paying commission on a guest who searched your name",
+      "Answering the same WhatsApp about rates and dates",
+      "Explaining the tuk-tuk route from the station",
+      "Letting a booking site own your best photographs",
     ],
-    turnaround: "Live in 3 working days",
-    priceCents: 6_999_000, // LKR 69,990, exactly the Dodo product's price
-    dodoProductId: { test: "pdt_0NsQGn1qe61XBQIMjlB81", live: null },
-    demo: { path: "/demo/startup", host: "sheetfast.io" },
-    accent: "#7b6cf6",
-    services: ["web", "web-apps"],
-    stack: ["Next.js", "Tailwind", "TypeScript", "Resend", "Vercel"],
+    turnaround: "Live in 7 working days",
+    priceCents: 12_999_000, // LKR 129,990, exactly the Dodo product's price
+    dodoProductId: { test: "pdt_0NsRpHSqzC6gsuDR5eSSg", live: null },
+    demo: { path: "/demo/stay", host: "palmhousegalle.lk" },
+    accent: "#f2b544",
+    services: ["web", "automation"],
+    stack: ["Next.js", "Tailwind", "Sanity", "Google Maps", "Resend"],
     faq: [
       {
-        q: "Can it grow into the real product?",
-        a: "Yes. It's a normal Next.js codebase in your repository, so the app can be built on top of it rather than beside it.",
+        q: "Will this replace Booking.com?",
+        a: "No, and it shouldn't try. It's for the guest who found you there and is now searching your name to book direct. That booking should be yours.",
       },
       {
-        q: "I don't have the copy yet.",
-        a: "Add the copywriting pack. You answer a short set of questions and we write the page.",
+        q: "Can guests pay a deposit online?",
+        a: "With the payments add-on, yes. The as-is build takes the enquiry with the dates and headcount already on it, and you confirm the way you do now.",
+      },
+    ],
+  },
+  {
+    slug: "classes",
+    index: "05",
+    vertical: "Classes & institutes",
+    title: "The Class",
+    tagline: "The timetable, the fees, and how to register.",
+    intro:
+      "Parents and students want three things: who teaches it, when it runs, and what it costs. Right now that lives in a WhatsApp group and a Facebook post from March. This puts it on one page that stays current.",
+    forWho: ["Tuition classes", "Institutes", "IELTS & language", "Music & dance", "Driving schools", "Sports academies"],
+    tags: ["leads", "menu", "bookings"],
+    pages: ["Home", "Classes & timetable", "The teachers", "Fees", "Results & reviews", "Register", "Thanks"],
+    features: [
+      "Timetable by day, grade and stream, editable by you",
+      "Fees per class and per term, stated openly",
+      "Teacher profiles with the qualifications parents look for",
+      "Registration that reaches your inbox, not a group chat",
+      "Sinhala or Tamil alongside English",
+      "Every branch with its own directions",
+    ],
+    offYourPlate: [
+      "Posting the same timetable to six WhatsApp groups",
+      "Answering whether there's a class on Poya day",
+      "Taking registrations on paper at the door",
+      "Parents calling one by one to ask the fee",
+    ],
+    turnaround: "Live in 5 working days",
+    priceCents: 7_999_000, // LKR 79,990, exactly the Dodo product's price
+    dodoProductId: { test: "pdt_0NsRpUCkNcp38w5JYipQ8", live: null },
+    demo: { path: "/demo/classes", host: "viduraclasses.lk" },
+    accent: "#7b6cf6",
+    services: ["web", "automation"],
+    stack: ["Next.js", "Tailwind", "Sanity", "WhatsApp", "Resend"],
+    faq: [
+      {
+        q: "We change the timetable every term.",
+        a: "Which is why it's data and not a picture of a timetable. Change a time in one place and every page that mentions it follows.",
+      },
+      {
+        q: "Can students pay fees online?",
+        a: "As an add-on. Most institutes start with registration online and fees in person, then add payments once a term has run through it.",
+      },
+    ],
+  },
+  {
+    slug: "supplier",
+    index: "06",
+    vertical: "Exporters & makers",
+    title: "The Supplier",
+    tagline: "Looks legitimate to a buyer who has never been here.",
+    intro:
+      "A buyer in Hamburg or Dubai is working out whether you are a real company. They want your certifications, your capacity and a way to ask for a price. This answers all three before they email someone else.",
+    forWho: ["Tea & spice", "Apparel", "Coconut products", "Gems & jewellery", "Seafood", "Light manufacturing"],
+    tags: ["leads", "menu"],
+    pages: ["Home", "What we make", "Certifications", "Capacity & process", "The company", "Request a quote", "Thanks"],
+    features: [
+      "Product pages with grades, specs and pack sizes",
+      "Certifications shown as proof, not as a paragraph",
+      "Quote form that asks the volume and the destination",
+      "Company profile and line card as a download",
+      "Fast from Europe and the Gulf, not only from Colombo",
+      "Written in English a foreign buyer will trust",
+    ],
+    offYourPlate: [
+      "Emailing the same PDF catalogue to every enquiry",
+      "Being judged on a website built in 2011",
+      "Explaining your certifications one buyer at a time",
+      "Losing an enquiry because nobody could find your MOQ",
+    ],
+    turnaround: "Live in 7 working days",
+    priceCents: 13_999_000, // LKR 139,990, exactly the Dodo product's price
+    dodoProductId: { test: "pdt_0NsRpNSuWvTF66I7GMNxo", live: null },
+    demo: { path: "/demo/supplier", host: "ceylonleafexports.lk" },
+    accent: "#3f8f5c",
+    services: ["web", "automation"],
+    stack: ["Next.js", "Tailwind", "Sanity", "Google Business", "Resend"],
+    faq: [
+      {
+        q: "Our buyers are overseas. Does that change the build?",
+        a: "It changes what the site has to prove and how fast it has to load from far away. Certifications go up front, and the pages are served from a CDN rather than a box in Colombo.",
+      },
+      {
+        q: "Can we take orders on it?",
+        a: "Not as-is, and usually you shouldn't want to. B2B orders are negotiated, so the site's job is to hand you an enquiry with the volume and destination already on it.",
       },
     ],
   },
@@ -434,6 +520,16 @@ export const SOLUTION_WE_NEED = [
 
 export const getSolution = (slug: string) => SOLUTIONS.find((s) => s.slug === slug);
 export const SOLUTION_SLUGS = SOLUTIONS.map((s) => s.slug) as [SolutionSlug, ...SolutionSlug[]];
+
+/**
+ * The catalog size, spelled out, because the copy says "all six" in half a
+ * dozen places and the catalog has changed twice already. Derived, so adding a
+ * solution never leaves a page claiming the wrong number.
+ */
+export const SOLUTION_COUNT = SOLUTIONS.length;
+export const SOLUTION_COUNT_WORD =
+  ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][SOLUTION_COUNT] ??
+  String(SOLUTION_COUNT);
 
 export type AddOnGroup = "brand" | "pages" | "integrations" | "ai";
 
@@ -470,15 +566,16 @@ export const ADD_ONS: AddOn[] = [
   { id: "pages-multilang", group: "pages", name: "Second language", line: "Sinhala, Tamil or anything else, fully switchable.", priceCents: 3_699_000 },
 
   { id: "int-booking", group: "integrations", name: "Online booking", line: "Real calendar, real slots, confirmations by email.", priceCents: 4_699_000 },
-  { id: "int-payments", group: "integrations", name: "Take payments", line: "Deposits or full payment, on your own site.", priceCents: 4_299_000, note: "Gateway fees are the provider's, not ours." },
+  { id: "int-payments", group: "integrations", name: "Take payments", line: "Deposits or full payment, on your own site.", priceCents: 4_299_000, note: "Gateway fees are the provider's, not ours. In Sri Lanka that is PayHere or Onepay." },
   { id: "int-whatsapp", group: "integrations", name: "WhatsApp handoff", line: "Forms and buttons that open a pre-filled chat.", priceCents: 1_199_000 },
   { id: "int-crm", group: "integrations", name: "CRM or sheet sync", line: "Every lead lands where your team already works.", priceCents: 1_999_000 },
   { id: "int-reviews", group: "integrations", name: "Google Reviews", line: "Live reviews on the page, no copy and paste.", priceCents: 1_199_000, note: "Needs a Google Business profile." },
   { id: "int-analytics", group: "integrations", name: "Analytics & goals", line: "GA4, plus the three numbers that actually matter.", priceCents: 999_000 },
   { id: "int-ordering", group: "integrations", name: "Online ordering", line: "Menu to cart to kitchen, no commission.", priceCents: 6_299_000, only: ["restaurant"] },
+  { id: "int-catalogue", group: "integrations", name: "Catalogue download", line: "A line card or spec sheet buyers can take away.", priceCents: 2_499_000, only: ["supplier"] },
 
   { id: "ai-chatbot", group: "ai", name: "AI site chatbot", line: "Answers from your own pages, around the clock.", priceCents: 5_299_000, monthlyCents: 849_000 },
-  { id: "ai-receptionist", group: "ai", name: "AI receptionist", line: "Picks up when you can't, books the job, texts you.", priceCents: 9_599_000, monthlyCents: 1_949_000 },
+  { id: "ai-receptionist", group: "ai", name: "AI receptionist", line: "Answers WhatsApp and chat when you can't, books the job, emails you.", priceCents: 9_599_000, monthlyCents: 1_949_000, note: "Answering a Sri Lankan phone number needs your telco's approval, so voice is scoped per business." },
   { id: "ai-quoting", group: "ai", name: "AI quoting assistant", line: "Turns a description into a priced quote for you to approve.", priceCents: 7_999_000, monthlyCents: 1_499_000 },
 ];
 

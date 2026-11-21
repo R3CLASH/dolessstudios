@@ -64,16 +64,40 @@
   --d-edge: #dde7e6;
 }
 
-[data-demo="startup"] {
-  /* SaaS: near-black with an electric indigo. */
-  --d-brand: #141327;
-  --d-brand-soft: #eceaff;
+[data-demo="stay"] {
+  /* Villa: deep palm green on sand, with a golden-hour accent. */
+  --d-brand: #17352b;
+  --d-brand-soft: #e8f0e9;
+  --d-accent: #e0a331;
+  --d-surface: #fffdf8;
+  --d-surface-2: #f4efe4;
+  --d-ink: #16211c;
+  --d-muted: #6b7268;
+  --d-edge: #e2dccd;
+}
+
+[data-demo="classes"] {
+  /* Institute: exam-paper blue, indigo accent, nothing playful. */
+  --d-brand: #1b2a63;
+  --d-brand-soft: #e8ebf8;
   --d-accent: #5b4bf5;
   --d-surface: #ffffff;
-  --d-surface-2: #f5f4fb;
-  --d-ink: #14131f;
-  --d-muted: #605c75;
-  --d-edge: #e3e1ee;
+  --d-surface-2: #f4f5fb;
+  --d-ink: #141829;
+  --d-muted: #5c6280;
+  --d-edge: #e1e3ef;
+}
+
+[data-demo="supplier"] {
+  /* Exporter: tea-leaf green, industrial greys, built to look audited. */
+  --d-brand: #14352a;
+  --d-brand-soft: #e6efe9;
+  --d-accent: #2f7a4a;
+  --d-surface: #ffffff;
+  --d-surface-2: #f3f6f3;
+  --d-ink: #111c17;
+  --d-muted: #5a6b61;
+  --d-edge: #dde5df;
 }
 
 :root {

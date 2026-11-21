@@ -56,7 +56,7 @@ export function productIdFor(solution: Solution): string | null {
  * This exists for a single question: can a Sri Lankan account actually receive a
  * payout? Dodo's minimum payout is $50, measured after fees and impossible to
  * lower, so the only way to find out is to put a real sale of more than that
- * through live mode — and none of our four solutions is the right thing to sell
+ * through live mode — and none of our catalog solutions is the right thing to sell
  * to ourselves. So: one deliberately-named product, bought once, by us.
  *
  * Narrow on purpose. It is a single exact id, never a pattern or a bypass of the

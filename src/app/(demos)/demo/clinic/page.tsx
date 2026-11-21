@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FAQ, INSURERS, PRACTICE, TEAM, TREATMENTS } from "@/lib/demo/clinic";
-import { Stars } from "@/components/demo/trades/Stars";
+import { Stars } from "@/components/demo/Stars";
 
 export default function SerendibHome() {
   return (

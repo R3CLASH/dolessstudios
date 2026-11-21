@@ -11,6 +11,8 @@ const C = {
   lime: "#c8f04a",
   violet: "#7b6cf6",
   teal: "#2fb5a0",
+  sand: "#f2b544",
+  leaf: "#3f8f5c",
 };
 
 /**
@@ -31,7 +33,9 @@ const LABELS: Record<SolutionSlug, string> = {
   trades: "A phone ringing with a quote request flying out of it",
   restaurant: "A menu board filling in beside a reserved table",
   clinic: "An appointment calendar with one slot being taken",
-  startup: "A landing page assembling itself above a rising chart",
+  stay: "A room card with its rate, beside a date range being picked",
+  classes: "A weekly timetable filling in above a row of teachers",
+  supplier: "A spec sheet with certification seals stamping onto it",
 };
 
 const ART: Record<SolutionSlug, React.ReactNode> = {
@@ -146,47 +150,144 @@ const ART: Record<SolutionSlug, React.ReactNode> = {
     </g>
   ),
 
-  // A one-page landing assembling itself, with a growing metric chart.
-  startup: (
+  // A room card with its nightly rate, beside a date range being chosen.
+  stay: (
     <g>
-      <rect x="40" y="38" width="320" height="224" rx="14" fill={C.ink} stroke={C.line} />
-      <circle cx="62" cy="58" r="5" fill={C.violet} />
-      <circle cx="78" cy="58" r="5" fill={C.line} />
-      <circle cx="94" cy="58" r="5" fill={C.line} />
-      <rect x="120" y="51" width="150" height="14" rx="7" fill={C.ink3} />
-
-      <g className="art-slide" style={{ animationDelay: "0s" }}>
-        <rect x="64" y="88" width="168" height="24" rx="6" fill={C.paper} />
-        <rect x="64" y="122" width="120" height="10" rx="5" fill={C.mist} opacity=".6" />
+      <rect x="34" y="42" width="178" height="216" rx="14" fill={C.ink} stroke={C.line} />
+      {/* Stand-in for the room photograph. */}
+      <rect x="34" y="42" width="178" height="104" rx="14" fill={C.ink3} />
+      <circle cx="78" cy="78" r="11" fill={C.sand} opacity=".8" />
+      <path d="M34 146v-26l34-24 30 22 28-20 86 48Z" fill={C.ink2} opacity=".9" />
+      <g className="art-pulse">
+        <rect x="150" y="56" width="50" height="22" rx="11" fill={C.sand} />
       </g>
-      <g className="art-slide" style={{ animationDelay: ".35s" }}>
-        <rect x="64" y="148" width="92" height="30" rx="15" fill={C.violet} />
-        <rect x="166" y="148" width="66" height="30" rx="15" fill={C.ink3} />
-      </g>
+      <text x="175" y="71" fill={C.ink} fontSize="11" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+        direct
+      </text>
 
-      <rect x="256" y="88" width="84" height="90" rx="10" fill={C.ink3} />
+      <rect x="56" y="166" width="104" height="11" rx="5.5" fill={C.paper} />
+      <rect x="56" y="188" width="72" height="8" rx="4" fill={C.mist} opacity=".55" />
+      {[0, 1, 2].map((i) => (
+        <circle key={i} cx={62 + i * 18} cy="218" r="6" fill={C.line} />
+      ))}
+      <rect x="56" y="236" width="60" height="10" rx="5" fill={C.sand} />
+
+      {/* Two nights selected out of a short strip of dates. */}
+      <rect x="236" y="76" width="128" height="148" rx="12" fill={C.ink} stroke={C.line} />
+      <rect x="252" y="94" width="58" height="9" rx="4.5" fill={C.paper} />
+      {[0, 1, 2].map((row) =>
+        [0, 1, 2, 3].map((col) => {
+          const picked = row === 1 && (col === 1 || col === 2);
+          return (
+            <rect
+              key={`${row}-${col}`}
+              x={252 + col * 26}
+              y={118 + row * 30}
+              width="20"
+              height="22"
+              rx="5"
+              fill={picked ? C.sand : C.ink3}
+              className={picked ? "art-pulse" : undefined}
+            />
+          );
+        }),
+      )}
+      <rect x="252" y="212" width="96" height="0" rx="0" fill="none" />
+      <text x="300" y="246" fill={C.mist} fontSize="12" fontFamily="monospace" textAnchor="middle">
+        2 nights · 4 guests
+      </text>
+    </g>
+  ),
+
+  // A weekly timetable stacking in, above the people who teach it.
+  classes: (
+    <g>
+      <rect x="34" y="40" width="332" height="166" rx="14" fill={C.ink} stroke={C.line} />
+      {["M", "T", "W", "T", "F"].map((d, i) => (
+        <text
+          key={`${d}-${i}`}
+          x={74 + i * 62}
+          y="66"
+          fill={C.mist}
+          fontSize="12"
+          fontFamily="monospace"
+          textAnchor="middle"
+        >
+          {d}
+        </text>
+      ))}
       {[
-        { x: 268, h: 30, d: "0s" },
-        { x: 288, h: 46, d: ".2s" },
-        { x: 308, h: 62, d: ".4s" },
-      ].map((b) => (
-        <rect
-          key={b.x}
-          x={b.x}
-          y={164 - b.h}
-          width="12"
-          height={b.h}
-          rx="3"
-          fill={C.violet}
-          className="art-grow"
-          style={{ animationDelay: b.d }}
-        />
+        { row: 0, cols: [0, 2, 4], d: "0s" },
+        { row: 1, cols: [1, 3], d: ".3s" },
+        { row: 2, cols: [0, 1, 4], d: ".6s" },
+      ].map((r) => (
+        <g key={r.row} className="art-stack" style={{ animationDelay: r.d }}>
+          {r.cols.map((c) => (
+            <rect
+              key={c}
+              x={50 + c * 62}
+              y={80 + r.row * 38}
+              width="48"
+              height="28"
+              rx="7"
+              fill={r.row === 1 && c === 1 ? C.violet : C.ink3}
+            />
+          ))}
+        </g>
       ))}
 
-      <rect x="64" y="200" width="276" height="42" rx="10" fill={C.ink2} stroke={C.line} />
-      <rect x="80" y="214" width="150" height="14" rx="7" fill={C.ink3} />
-      <rect x="244" y="209" width="80" height="24" rx="12" fill={C.lime} />
-      <rect x="236" y="214" width="2" height="14" fill={C.paper} className="art-blink" />
+      {/* The teachers, and one registration landing. */}
+      {[0, 1, 2, 3].map((i) => (
+        <g key={i}>
+          <circle cx={62 + i * 46} cy="240" r="17" fill={C.ink3} stroke={C.line} />
+          <circle cx={62 + i * 46} cy="234" r="6" fill={C.mist} opacity=".6" />
+          <path d={`M${50 + i * 46} 254a12 12 0 0 1 24 0Z`} fill={C.mist} opacity=".45" />
+        </g>
+      ))}
+      <g className="art-slide">
+        <rect x="248" y="222" width="118" height="38" rx="19" fill={C.ink} stroke={C.line} />
+        <circle cx="270" cy="241" r="8" fill={C.violet} />
+        <rect x="286" y="237" width="64" height="8" rx="4" fill={C.mist} opacity=".75" />
+      </g>
+    </g>
+  ),
+
+  // A spec sheet, with certification seals stamping down onto it.
+  supplier: (
+    <g>
+      <rect x="40" y="38" width="186" height="224" rx="12" fill={C.ink} stroke={C.line} />
+      <rect x="62" y="62" width="88" height="14" rx="7" fill={C.paper} />
+      <rect x="62" y="88" width="142" height="8" rx="4" fill={C.mist} opacity=".4" />
+      {[0, 1, 2, 3, 4].map((i) => (
+        <g key={i} className="art-stack" style={{ animationDelay: `${i * 0.22}s` }}>
+          <rect x="62" y={116 + i * 26} width="60" height="9" rx="4.5" fill={C.mist} opacity=".55" />
+          <rect x="140" y={116 + i * 26} width="64" height="9" rx="4.5" fill={C.ink3} />
+        </g>
+      ))}
+      <rect x="62" y="250" width="0" height="0" fill="none" />
+
+      {/* Three seals: the thing a foreign buyer actually scans for. */}
+      {[
+        { y: 62, c: C.leaf, d: "0s" },
+        { y: 136, c: C.leaf, d: ".35s" },
+        { y: 210, c: C.lime, d: ".7s" },
+      ].map((seal) => (
+        <g key={seal.y} className="art-grow" style={{ animationDelay: seal.d, transformOrigin: "308px center" }}>
+          <circle cx="308" cy={seal.y + 20} r="30" fill={C.ink} stroke={seal.c} strokeWidth="2" />
+          <circle cx="308" cy={seal.y + 20} r="22" fill={seal.c} opacity=".14" />
+          <path
+            d={`M296 ${seal.y + 20}l8 8 16-16`}
+            fill="none"
+            stroke={seal.c}
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+      ))}
+      <text x="308" y="286" fill={C.mist} fontSize="12" fontFamily="monospace" textAnchor="middle">
+        certified
+      </text>
     </g>
   ),
 };

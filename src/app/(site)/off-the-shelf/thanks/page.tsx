@@ -224,7 +224,7 @@ export default async function ThanksPage({
                 href="/off-the-shelf"
                 className={outcome === "not-paid" || (paid && trackHref) ? "btn btn-ghost" : "btn btn-accent"}
               >
-                {outcome === "not-paid" ? "See all four" : "Browse the others →"}
+                {outcome === "not-paid" ? "See them all" : "Browse the others →"}
               </Link>
             </div>
             {paid && (

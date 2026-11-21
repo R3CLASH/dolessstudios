@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ADDON_GROUPS, ADD_ONS, SITE, SOLUTIONS, SOLUTION_INCLUDED, SOLUTION_STEPS } from "@/lib/content";
+import {
+  ADDON_GROUPS,
+  ADD_ONS,
+  SITE,
+  SOLUTIONS,
+  SOLUTION_COUNT_WORD,
+  SOLUTION_INCLUDED,
+  SOLUTION_STEPS,
+} from "@/lib/content";
 import { BASE_CURRENCY, formatMoney } from "@/lib/money";
 import { PageHero } from "@/components/sections/PageHero";
 import { SolutionGrid } from "@/components/solutions/SolutionGrid";
@@ -10,6 +18,10 @@ import { Eyebrow, Reveal } from "@/components/ui/motion";
 import { StrikeList } from "@/components/about/StrikeList";
 
 const cheapest = Math.min(...SOLUTIONS.map((s) => s.priceCents));
+/** The shortest turnaround on the shelf, so the aside can't go stale. */
+const fastest = SOLUTIONS.map((s) => s.turnaround).sort(
+  (a, b) => (parseInt(a.replace(/\D*/, ""), 10) || 99) - (parseInt(b.replace(/\D*/, ""), 10) || 99),
+)[0];
 
 /** Where a prebuilt site is the wrong answer. Short on purpose: StrikeList renders these huge. */
 const OFF_THE_SHELF_LIMITS = [
@@ -22,13 +34,13 @@ const OFF_THE_SHELF_LIMITS = [
 
 export const metadata: Metadata = {
   title: "Off the shelf",
-  description: `Prebuilt websites for trades, food and salons, clinics and startups. Fixed price from ${formatMoney(
+  description: `Prebuilt websites for trades, food and salons, clinics, hotels and villas, classes and exporters. Fixed price from ${formatMoney(
     cheapest,
   )}, built on your domain with your brand, live in a week.`,
   alternates: { canonical: "/off-the-shelf" },
 };
 
-/** Four Offers, so the catalog itself is readable as a price list. */
+/** One Offer per solution, so the catalog itself is readable as a price list. */
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "OfferCatalog",
@@ -56,7 +68,9 @@ export default function OffTheShelfPage() {
         eyebrow="Off the shelf"
         heavy="Off the shelf."
         light="On your domain."
-        intro="Four sites we've already built, for the four jobs people ask us for most. You're not buying a zip file to figure out yourself — we put your brand and your words on it, launch it on your domain, and hand you the keys."
+        intro={`${SOLUTION_COUNT_WORD[0].toUpperCase()}${SOLUTION_COUNT_WORD.slice(
+          1,
+        )} sites we've already built, for the jobs people ask us for most. You're not buying a zip file to figure out yourself — we put your brand and your words on it, launch it on your domain, and hand you the keys.`}
         aside={
           <div className="flex flex-col gap-5 font-mono text-sm text-mist">
             <div>
@@ -69,14 +83,14 @@ export default function OffTheShelfPage() {
             </div>
             <div className="flex flex-col gap-1 border-t border-line pt-5">
               <span className="text-paper">live in a week</span>
-              <span>three days for the simple one</span>
+              <span>{fastest.replace(/^Live in /, "")} for the quickest</span>
             </div>
           </div>
         }
       >
         <div className="flex flex-wrap gap-3">
           <a href="#catalog" data-no-transition className="btn btn-accent">
-            See the four
+            See all {SOLUTION_COUNT_WORD}
           </a>
           <Link href="/services" className="btn btn-ghost">
             Or something bespoke
@@ -84,7 +98,7 @@ export default function OffTheShelfPage() {
         </div>
       </PageHero>
 
-      <section id="catalog" className="scroll-mt-28 pb-24 sm:pb-36" aria-label="The four off-the-shelf sites">
+      <section id="catalog" className="scroll-mt-28 pb-24 sm:pb-36" aria-label="The off-the-shelf sites">
         <div className="wrap">
           <SolutionGrid />
         </div>
@@ -181,7 +195,7 @@ export default function OffTheShelfPage() {
 
       <BigCta
         title="Not sure which one?"
-        subtitle="Tell us what you do and we'll point at one of the four. If none of them fit, we'll say that instead of selling you the closest."
+        subtitle={`Tell us what you do and we'll point at one of the ${SOLUTION_COUNT_WORD}. If none of them fit, we'll say that instead of selling you the closest.`}
       />
     </>
   );

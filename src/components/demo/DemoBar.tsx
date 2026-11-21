@@ -40,7 +40,7 @@ export function DemoBar({ solutionSlug, price, name }: { solutionSlug: string; p
             href="/off-the-shelf"
             className="!min-h-9 rounded-full border border-white/25 px-4 py-2 text-sm text-white/85 transition-colors hover:border-white/60 hover:text-white"
           >
-            All four
+            See them all
           </a>
         </div>
       </div>

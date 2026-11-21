@@ -20,7 +20,7 @@ import { Eyebrow, Reveal } from "@/components/ui/motion";
  * one. A bad or missing token is a notFound(), not a 401, so the route can't be
  * used to find out which references exist.
  *
- * No accounts, no passwords, no sessions. For four products bought once each,
+ * No accounts, no passwords, no sessions. For a handful of products bought once each,
  * a signed link does the whole job an account would, and there is no login to
  * forget a year later.
  */
