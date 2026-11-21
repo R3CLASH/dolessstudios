@@ -56,7 +56,7 @@ export function SolutionGrid() {
         })}
       </div>
 
-      <ul ref={grid} className="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <ul ref={grid} className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-start">
         {list.map((s, i) => (
           <li key={s.slug} data-card className={i % 2 === 1 ? "md:mt-24" : ""}>
             <article className="group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-line bg-ink-2 transition-colors duration-500 hover:border-paper/30">
