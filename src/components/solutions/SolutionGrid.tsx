@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { SOLUTIONS, SOLUTION_TAGS, type SolutionTag } from "@/lib/content";
-import { formatLkrApprox, formatMoney } from "@/lib/money";
+import { formatMoney, formatUsdApprox } from "@/lib/money";
 import { gsap, prefersReducedMotion, useIsoLayoutEffect } from "@/lib/gsap";
 import { SolutionArt } from "./SolutionArt";
 
@@ -84,7 +84,7 @@ export function SolutionGrid() {
 
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-line pt-5">
                   <span className="display heavy text-3xl tabular-nums">{formatMoney(s.priceCents)}</span>
-                  <span className="font-mono text-xs text-mist">{formatLkrApprox(s.priceCents)}</span>
+                  <span className="font-mono text-xs text-mist">{formatUsdApprox(s.priceCents)}</span>
                   <span className="chip ml-auto">{s.turnaround}</span>
                 </div>
 

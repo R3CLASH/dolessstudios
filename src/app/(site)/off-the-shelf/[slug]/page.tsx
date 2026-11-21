@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SITE, SOLUTIONS, SOLUTION_FAQ, SOLUTION_WE_NEED, addOnsFor, getSolution } from "@/lib/content";
-import { BASE_CURRENCY, formatLkrApprox, formatMoney } from "@/lib/money";
+import { BASE_CURRENCY, formatMoney, formatUsdApprox } from "@/lib/money";
 import { checkoutHrefFor } from "@/lib/solutions";
 import { PageHero } from "@/components/sections/PageHero";
 import { SolutionArt } from "@/components/solutions/SolutionArt";
@@ -78,11 +78,11 @@ export default async function SolutionPage({ params }: { params: Promise<{ slug:
       >
         <div className="flex flex-col gap-6">
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <span className="display heavy text-[clamp(2.6rem,6vw,4rem)] leading-none tabular-nums">
+            <span className="display heavy text-[clamp(2rem,4.4vw,3.1rem)] leading-none tabular-nums">
               {formatMoney(solution.priceCents)}
             </span>
             <span className="text-lg text-paper/70">as-is, done for you</span>
-            <span className="font-mono text-sm text-mist">{formatLkrApprox(solution.priceCents)}</span>
+            <span className="font-mono text-sm text-mist">{formatUsdApprox(solution.priceCents)}</span>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <a href="#build" data-no-transition className="btn btn-accent">

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ADDON_GROUPS, type AddOn, type SolutionSlug } from "@/lib/content";
-import { formatLkrApprox, formatMoney, sumCents } from "@/lib/money";
+import { formatMoney, formatUsdApprox, sumCents } from "@/lib/money";
 import { SolutionQuoteForm } from "./SolutionQuoteForm";
 
 type Props = {
@@ -113,11 +113,11 @@ export function SolutionConfigurator({ slug, title, priceCents, turnaround, addO
               <span className="eyebrow">{asIs ? "As-is" : `With ${picked.length} add-on${picked.length === 1 ? "" : "s"}`}</span>
               <span
                 aria-live="polite"
-                className="display heavy text-[clamp(3rem,7vw,5rem)] leading-none tabular-nums text-accent"
+                className="display heavy text-[clamp(2rem,4.2vw,3rem)] leading-none tabular-nums text-accent"
               >
                 {formatMoney(oneOff)}
               </span>
-              <span className="font-mono text-sm text-mist">{formatLkrApprox(oneOff)}</span>
+              <span className="font-mono text-sm text-mist">{formatUsdApprox(oneOff)}</span>
               {monthly > 0 && (
                 <span className="mt-1 text-sm text-paper/70">
                   plus <strong className="text-paper">{formatMoney(monthly)}/month</strong> for the add-ons that keep running
