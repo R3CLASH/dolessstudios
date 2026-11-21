@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
-import { NAV, SERVICES, SITE } from "@/lib/content";
+import { NAV, SERVICES, SITE, SOLUTIONS } from "@/lib/content";
 import { MARK_POSES, HEAD_POSES } from "@/components/brand/Mark";
 import { useTransitionNav } from "./PageTransition";
 import { lockScroll } from "./SmoothScroll";
@@ -235,11 +235,11 @@ export function Header() {
           {/* Checklist nav: pages are tasks, the current one is ticked off */}
           <nav
             aria-label="Primary"
-            className={`absolute left-1/2 top-4 hidden -translate-x-1/2 items-center gap-1 rounded-full border border-line bg-ink/70 p-1.5 backdrop-blur-xl transition-[transform,opacity] duration-500 ease-[var(--ease-lazy)] lg:flex ${
+            className={`absolute left-1/2 top-4 hidden -translate-x-1/2 items-center gap-1 rounded-full border border-line bg-ink/70 p-1.5 backdrop-blur-xl transition-[transform,opacity] duration-500 ease-[var(--ease-lazy)] xl:flex ${
               asleep ? "pointer-events-none -translate-y-20 opacity-0" : "translate-y-0 opacity-100"
             }`}
           >
-            {NAV.slice(1, 4).map((item) => {
+            {NAV.slice(1, 5).map((item) => {
               const active = isActive(pathname, item.href);
               return (
                 <Link
@@ -348,6 +348,23 @@ export function Header() {
 
           <aside className="flex flex-col gap-8 lg:col-span-4 lg:pt-14">
             <div data-menu-fade>
+              <p className="eyebrow mb-4">Off the shelf</p>
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-1">
+                {SOLUTIONS.map((s) => (
+                  <li key={s.slug}>
+                    <Link
+                      href={`/off-the-shelf/${s.slug}`}
+                      tabIndex={open ? 0 : -1}
+                      className="group inline-flex items-center gap-2 py-1 text-paper/80 hover:text-paper"
+                    >
+                      <span className="font-mono text-[11px] text-mist">{s.index}</span>
+                      <span className="strike strike-on-hover">{s.title}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div data-menu-fade>
               <p className="eyebrow mb-4">Services</p>
               <ul className="grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-1">
                 {SERVICES.map((s) => (
@@ -368,7 +385,7 @@ export function Header() {
               <p className="mb-2 font-semibold">Too lazy to click?</p>
               <p className="text-sm leading-relaxed text-mist">
                 Press <kbd className="rounded border border-line px-1 font-mono text-xs">1</kbd>–
-                <kbd className="rounded border border-line px-1 font-mono text-xs">5</kbd> anywhere on the site, or{" "}
+                <kbd className="rounded border border-line px-1 font-mono text-xs">6</kbd> anywhere on the site, or{" "}
                 <button
                   type="button"
                   tabIndex={open ? 0 : -1}

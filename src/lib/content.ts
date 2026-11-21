@@ -24,9 +24,10 @@ export type NavItem = { href: string; label: string; note: string; key: string }
 export const NAV: NavItem[] = [
   { href: "/", label: "Home", note: "start over", key: "1" },
   { href: "/services", label: "Services", note: "the stuff we build", key: "2" },
-  { href: "/work", label: "Work", note: "proof we do the work", key: "3" },
-  { href: "/about", label: "About", note: "why lazy is a method", key: "4" },
-  { href: "/contact", label: "Contact", note: "hand us something boring", key: "5" },
+  { href: "/off-the-shelf", label: "Off the shelf", note: "sites that already exist", key: "3" },
+  { href: "/work", label: "Work", note: "proof we do the work", key: "4" },
+  { href: "/about", label: "About", note: "why lazy is a method", key: "5" },
+  { href: "/contact", label: "Contact", note: "hand us something boring", key: "6" },
 ];
 
 export type ServiceSlug = "web" | "shopify" | "wordpress" | "web-apps" | "automation";
@@ -188,6 +189,360 @@ export const SERVICES: Service[] = [
 ];
 
 export const getService = (slug: string) => SERVICES.find((s) => s.slug === slug);
+
+/* ── Off the shelf ──────────────────────────────────────────────────────────
+   Prebuilt websites per vertical, sold at a fixed price and built done-for-you.
+   Money is always integer minor units of USD — see src/lib/money.ts.
+   Anything in [square brackets] is a placeholder to replace before launch. */
+
+export type SolutionSlug = "trades" | "restaurant" | "clinic" | "startup";
+
+/** What a solution does. Drives the catalog filter pills, not the verticals. */
+export type SolutionTag = "leads" | "bookings" | "payments" | "menu" | "ai";
+
+export const SOLUTION_TAGS: { id: SolutionTag; label: string }[] = [
+  { id: "leads", label: "Catches leads" },
+  { id: "bookings", label: "Takes bookings" },
+  { id: "payments", label: "Takes payments" },
+  { id: "menu", label: "Menu / price list" },
+  { id: "ai", label: "AI add-ons ready" },
+];
+
+export type Solution = {
+  slug: SolutionSlug;
+  index: string;
+  /** Market label, used in chips, nav and metadata. */
+  vertical: string;
+  /** Product name. */
+  title: string;
+  /** One line for the card. */
+  tagline: string;
+  /** Two sentences for the hero and the meta description. */
+  intro: string;
+  forWho: string[];
+  tags: SolutionTag[];
+  /** Pages you get, in order. */
+  pages: string[];
+  /** Functional features, rendered in the numbered grid. */
+  features: string[];
+  /** Fed to <AutoChecklist>, same shape as Service.offYourPlate. */
+  offYourPlate: string[];
+  turnaround: string;
+  /** As-is price in minor units of BASE_CURRENCY. */
+  priceCents: number;
+  /** Dodo dashboard product per environment: test and live ids differ. null = checkout off. */
+  dodoProductId: { test: string | null; live: string | null };
+  /**
+   * The live, clickable demo. null until one is built, in which case the page
+   * falls back to placeholder art.
+   * `path` is a route in this app (see src/app/(demos)); `host` is the fake
+   * domain shown in the browser frame's URL bar.
+   */
+  demo: { path: string; host: string } | null;
+  accent: string;
+  /** Which bespoke services this maps to, for cross-links and lead tagging. */
+  services: ServiceSlug[];
+  stack: string[];
+  faq: { q: string; a: string }[];
+};
+
+export const SOLUTIONS: Solution[] = [
+  {
+    slug: "trades",
+    index: "01",
+    vertical: "Trades & services",
+    title: "The Callout",
+    tagline: "Turns a phone search into a booked job.",
+    intro:
+      "Built for people who are up a ladder when the phone rings. Services, the areas you cover, proof you turn up, and a quote form that lands in your inbox instead of getting lost in WhatsApp.",
+    forWho: ["Electricians", "Plumbers", "Cleaners", "Landscapers", "AC & repair", "Movers"],
+    tags: ["leads", "ai"],
+    pages: ["Home", "Services", "Service areas", "About & the team", "Reviews", "Get a quote", "Thanks"],
+    features: [
+      "Quote form that emails you and saves every lead",
+      "Click-to-call and WhatsApp on every screen",
+      "Service-area list built for local search",
+      "Before and after gallery",
+      "Google Reviews on the page",
+      "Fast on 3G, because your customers are outside",
+    ],
+    offYourPlate: [
+      "Typing the same quote into WhatsApp ten times",
+      "Losing a job because you missed one call",
+      "Explaining which areas you cover",
+      "Paying a directory to list you",
+    ],
+    turnaround: "Live in 5 working days",
+    priceCents: 24_900,
+    dodoProductId: { test: null, live: null },
+    demo: { path: "/demo/trades", host: "voltelectric.lk" },
+    accent: "#ff5a1f",
+    services: ["web", "automation"],
+    stack: ["Next.js", "Tailwind", "WhatsApp", "Google Business", "Resend"],
+    faq: [
+      {
+        q: "I work alone. Is this overkill?",
+        a: "It's the opposite. One person with no office needs the site to answer the questions you'd otherwise answer by phone at 7pm.",
+      },
+      {
+        q: "Can it stop the time-wasters?",
+        a: "Partly. The quote form asks for the job, the address and a photo, so you can price it before you drive anywhere.",
+      },
+    ],
+  },
+  {
+    slug: "restaurant",
+    index: "02",
+    vertical: "Food & salons",
+    title: "The Table",
+    tagline: "The menu, the hours and the address, found in one tap.",
+    intro:
+      "Most people check your page for three things: are you open, where are you, and what does it cost. This puts all three above the fold and keeps the menu editable without a developer.",
+    forWho: ["Restaurants", "Cafes", "Bakeries", "Salons", "Barbers", "Spas"],
+    tags: ["menu", "bookings", "leads"],
+    pages: ["Home", "Menu or price list", "Gallery", "About", "Find us & hours", "Book a table", "Thanks"],
+    features: [
+      "Menu or price list you can edit yourself",
+      "Opening hours that show open or closed right now",
+      "Map, directions and one-tap calling",
+      "Photo gallery that stays fast",
+      "Reservation or booking request form",
+      "Links out to delivery apps you already use",
+    ],
+    offYourPlate: [
+      "Re-uploading a PDF menu every price change",
+      "Answering \"are you open?\" on Instagram",
+      "Paying commission on every delivery order",
+      "Explaining where to park",
+    ],
+    turnaround: "Live in 5 working days",
+    priceCents: 24_900,
+    dodoProductId: { test: null, live: null },
+    demo: { path: "/demo/restaurant", host: "kolambakitchen.lk" },
+    accent: "#c8f04a",
+    services: ["web"],
+    stack: ["Next.js", "Tailwind", "Sanity", "Google Maps", "Resend"],
+    faq: [
+      {
+        q: "Can I change prices myself?",
+        a: "Yes. The menu lives in a simple editor built around your items, not a page builder you have to learn.",
+      },
+      {
+        q: "Do you do online ordering?",
+        a: "As an add-on. Menu to cart to kitchen, on your own site, so you stop paying commission per order.",
+      },
+    ],
+  },
+  {
+    slug: "clinic",
+    index: "03",
+    vertical: "Clinics & practices",
+    title: "The Practice",
+    tagline: "Credibility first, appointment second.",
+    intro:
+      "For the practices where people check you out before they trust you. Treatments and what they cost, the people who do them, your policies in plain language, and an appointment request that reaches the front desk.",
+    forWho: ["Dentists", "Physios", "Clinics", "Law firms", "Accountants", "Consultants"],
+    tags: ["bookings", "leads", "ai"],
+    pages: ["Home", "Treatments or services", "The team", "Fees & insurance", "Policies", "Request an appointment", "Thanks"],
+    features: [
+      "One page per treatment, written for patients not peers",
+      "Team profiles with credentials and registrations",
+      "Fees and what insurance covers, stated openly",
+      "Appointment request with the details you need up front",
+      "Policy and consent pages that are easy to keep current",
+      "Accessible to WCAG AA, because your audience needs it",
+    ],
+    offYourPlate: [
+      "Reading out the same fees on every call",
+      "Taking appointment details by phone, twice",
+      "Explaining what the insurance covers",
+      "Chasing a web developer to fix one date",
+    ],
+    turnaround: "Live in 7 working days",
+    priceCents: 34_900,
+    dodoProductId: { test: null, live: null },
+    demo: { path: "/demo/clinic", host: "serendibdental.lk" },
+    accent: "#2fb5a0",
+    services: ["web", "automation"],
+    stack: ["Next.js", "Tailwind", "Sanity", "Cal.com", "Resend"],
+    faq: [
+      {
+        q: "Is it compliant?",
+        a: "The structure is: accessible markup, a policy and consent page, no tracking without consent. The wording of your own policies has to come from you or your regulator.",
+      },
+      {
+        q: "Can patients book directly?",
+        a: "The as-is build takes an appointment request your desk confirms. Real calendar booking with live slots is an add-on.",
+      },
+    ],
+  },
+  {
+    slug: "startup",
+    index: "04",
+    vertical: "Startups & SaaS",
+    title: "The Launch",
+    tagline: "One page that explains it and collects the email.",
+    intro:
+      "For the week you need to be live and have nothing to show but a clear idea. Hero, the problem, how you solve it, pricing, and a signup that works before the product does.",
+    forWho: ["Pre-launch SaaS", "Side projects", "Agencies", "Indie apps", "Waitlists", "Pitch pages"],
+    tags: ["leads", "payments", "ai"],
+    pages: ["Hero & problem", "How it works", "Features", "Pricing", "FAQ", "Waitlist or signup", "Thanks"],
+    features: [
+      "Pricing table built from your plans",
+      "Waitlist capture that stores every signup",
+      "Open Graph cards so links look right when shared",
+      "Analytics and conversion goals wired up",
+      "Scores green on Core Web Vitals out of the box",
+      "Ready for a payment link the day you have something to sell",
+    ],
+    offYourPlate: [
+      "Wrestling a page builder at 1am",
+      "Paying monthly for a landing-page tool",
+      "Wondering why the link preview is blank",
+      "Rebuilding the page when the pitch changes",
+    ],
+    turnaround: "Live in 3 working days",
+    priceCents: 19_900,
+    dodoProductId: { test: null, live: null },
+    demo: { path: "/demo/startup", host: "sheetfast.io" },
+    accent: "#7b6cf6",
+    services: ["web", "web-apps"],
+    stack: ["Next.js", "Tailwind", "TypeScript", "Resend", "Vercel"],
+    faq: [
+      {
+        q: "Can it grow into the real product?",
+        a: "Yes. It's a normal Next.js codebase in your repository, so the app can be built on top of it rather than beside it.",
+      },
+      {
+        q: "I don't have the copy yet.",
+        a: "Add the copywriting pack. You answer a short set of questions and we write the page.",
+      },
+    ],
+  },
+];
+
+/**
+ * The three things we need from a buyer before we can build, whichever solution
+ * they bought. Shown on every detail page and again on the thanks page, which is
+ * the start of delivery rather than just a receipt.
+ */
+export const SOLUTION_WE_NEED = [
+  "Your logo, or the branding pack",
+  "A few photos of the real thing",
+  "Access to your domain",
+];
+
+export const getSolution = (slug: string) => SOLUTIONS.find((s) => s.slug === slug);
+export const SOLUTION_SLUGS = SOLUTIONS.map((s) => s.slug) as [SolutionSlug, ...SolutionSlug[]];
+
+export type AddOnGroup = "brand" | "pages" | "integrations" | "ai";
+
+export const ADDON_GROUPS: { id: AddOnGroup; label: string; line: string }[] = [
+  { id: "brand", label: "Branding & words", line: "If you don't have a logo or the copy yet." },
+  { id: "pages", label: "Extra pages", line: "More of the site, same build." },
+  { id: "integrations", label: "Integrations", line: "Wire it to the tools you already pay for." },
+  { id: "ai", label: "AI add-ons", line: "The bits that answer for you." },
+];
+
+export type AddOn = {
+  /** Stable id, stored on the lead row. Don't rename these once they're in the database. */
+  id: string;
+  group: AddOnGroup;
+  name: string;
+  line: string;
+  /** One-off price in minor units of BASE_CURRENCY. */
+  priceCents: number;
+  /** Monthly price in minor units, for the add-ons that keep running. */
+  monthlyCents?: number;
+  /** Caveat shown under the name. */
+  note?: string;
+  /** When set, only offered on these solutions. Absent = offered on all of them. */
+  only?: SolutionSlug[];
+};
+
+export const ADD_ONS: AddOn[] = [
+  { id: "brand-logo", group: "brand", name: "Logo & brand kit", line: "Logo, colours, type, and the files to use them anywhere.", priceCents: 12_000 },
+  { id: "brand-copy", group: "brand", name: "Copywriting", line: "We write every page. You answer a few questions.", priceCents: 9_500 },
+  { id: "brand-photos", group: "brand", name: "Photo sourcing", line: "Licensed photos chosen and cut to fit your site.", priceCents: 4_500 },
+
+  { id: "pages-extra", group: "pages", name: "Extra page", line: "Any page beyond the ones included. Priced per page.", priceCents: 4_500 },
+  { id: "pages-blog", group: "pages", name: "Blog or news section", line: "Listing, post template, and a CMS to post from.", priceCents: 9_000 },
+  { id: "pages-multilang", group: "pages", name: "Second language", line: "Sinhala, Tamil or anything else, fully switchable.", priceCents: 11_000 },
+
+  { id: "int-booking", group: "integrations", name: "Online booking", line: "Real calendar, real slots, confirmations by email.", priceCents: 14_000 },
+  { id: "int-payments", group: "integrations", name: "Take payments", line: "Deposits or full payment, on your own site.", priceCents: 13_000, note: "Gateway fees are the provider's, not ours." },
+  { id: "int-whatsapp", group: "integrations", name: "WhatsApp handoff", line: "Forms and buttons that open a pre-filled chat.", priceCents: 3_500 },
+  { id: "int-crm", group: "integrations", name: "CRM or sheet sync", line: "Every lead lands where your team already works.", priceCents: 6_000 },
+  { id: "int-reviews", group: "integrations", name: "Google Reviews", line: "Live reviews on the page, no copy and paste.", priceCents: 3_500, note: "Needs a Google Business profile." },
+  { id: "int-analytics", group: "integrations", name: "Analytics & goals", line: "GA4, plus the three numbers that actually matter.", priceCents: 3_000 },
+  { id: "int-ordering", group: "integrations", name: "Online ordering", line: "Menu to cart to kitchen, no commission.", priceCents: 19_000, only: ["restaurant"] },
+
+  { id: "ai-chatbot", group: "ai", name: "AI site chatbot", line: "Answers from your own pages, around the clock.", priceCents: 16_000, monthlyCents: 2_500 },
+  { id: "ai-receptionist", group: "ai", name: "AI receptionist", line: "Picks up when you can't, books the job, texts you.", priceCents: 29_000, monthlyCents: 5_900 },
+  { id: "ai-quoting", group: "ai", name: "AI quoting assistant", line: "Turns a description into a priced quote for you to approve.", priceCents: 24_000, monthlyCents: 4_500 },
+];
+
+export const getAddOn = (id: string) => ADD_ONS.find((a) => a.id === id);
+export const addOnsFor = (slug: SolutionSlug) => ADD_ONS.filter((a) => !a.only || a.only.includes(slug));
+export const ADD_ON_IDS = ADD_ONS.map((a) => a.id) as [string, ...string[]];
+
+/** Pay, send us the bits, we build, keys over. Same shape as PROCESS. */
+export const SOLUTION_STEPS = [
+  {
+    n: "01",
+    title: "Pick & pay",
+    body: "Buy it as-is online, or tick the changes you want and we send a fixed quote first. No call needed either way.",
+  },
+  {
+    n: "02",
+    title: "Send the bits",
+    body: "One short form: your logo, a few photos, your words, and access to your domain. Missing some? Add the branding pack.",
+  },
+  {
+    n: "03",
+    title: "We build it",
+    body: "Your content, your colours, your domain. You get a preview link to pick at before anything goes live.",
+  },
+  {
+    n: "04",
+    title: "Keys over",
+    body: "It goes live in your accounts, with a walkthrough video and 14 days of fixes. After that it's yours, with or without us.",
+  },
+];
+
+/** Every build includes these, whichever one you pick. */
+export const SOLUTION_INCLUDED = [
+  "Your domain, connected properly",
+  "Your logo and colours through the whole site",
+  "Analytics and a form that actually delivers",
+  "A walkthrough video, so you can edit it yourself",
+  "14 days of fixes after launch",
+  "Every account in your name, not ours",
+];
+
+/** Shared questions, merged with each solution's own on the detail page. */
+export const SOLUTION_FAQ = [
+  {
+    q: "Is this a template everyone else has?",
+    a: "The structure is prebuilt. The brand, the words and the content are yours. We don't sell a template as custom work, which is exactly why this page has prices on it.",
+  },
+  {
+    q: "What do you need from me?",
+    a: "Your logo, a few photos, your words, and access to your domain. If you don't have the logo or the words yet, add the branding pack and we'll make them.",
+  },
+  {
+    q: "Who owns it at the end?",
+    a: "You do. It's built in your accounts, on your domain, in a repository you own, and handed over with everything you need to run it without us.",
+  },
+  {
+    q: "What if I want something that isn't listed?",
+    a: "Then it's a bespoke project, not an off-the-shelf one. Tell us what you need and we'll quote it properly instead of pretending it fits.",
+  },
+  {
+    q: "Are there monthly fees?",
+    a: "Not from us on the as-is build. A few add-ons cost monthly because something has to keep running; where that's true, the monthly price is shown next to it.",
+  },
+];
 
 export type Project = {
   slug: string;

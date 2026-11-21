@@ -38,6 +38,8 @@ jobs:
       - name: Check deploy configuration
         env:
           AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+          DODO_API_KEY: ${{ secrets.DODO_API_KEY }}
+          DODO_ENVIRONMENT: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
         run: |
           if [ -z "$AWS_ROLE_ARN" ]; then
             echo "::error::AWS_ROLE_ARN (variable) isn't visible to this job. Add it to the 'production' environment (or the repository) under Settings → Secrets and variables → Actions."
@@ -47,6 +49,12 @@ jobs:
             */doless-gha-deploy) ;;
             *) echo "::warning::AWS_ROLE_ARN is $AWS_ROLE_ARN; the role infra/bootstrap.sh set up is doless-gha-deploy." ;;
           esac
+          # The buy button is baked at build time, so this job needs the key even though the
+          # Lambda gets its own copy from Terraform. Mismatched halves = a button that 503s.
+          if [ "$DODO_ENVIRONMENT" = "live_mode" ] && [ -z "$DODO_API_KEY" ]; then
+            echo "::error::DODO_ENVIRONMENT is live_mode but the DODO_API_KEY secret isn't visible to this job, so the build would bake a site with no buy buttons."
+            exit 1
+          fi
 
       - uses: actions/checkout@v4
 
@@ -98,7 +106,15 @@ jobs:
           fi
 
       # The site URL is baked into the build (metadata, sitemap, Open Graph).
+      #
+      # The Dodo pair is here for the same reason: checkoutHrefFor() runs at BUILD time, because the
+      # solution detail pages are prerendered via generateStaticParams. Terraform setting these on the
+      # function is not enough — without them here the buy button is absent from the deployed HTML.
+      # That is also why switching payments on is a redeploy, not an env change.
       - name: Build app and Lambda bundles
+        env:
+          DODO_PAYMENTS_API_KEY: ${{ secrets.DODO_API_KEY }}
+          DODO_PAYMENTS_ENVIRONMENT: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
         run: NEXT_PUBLIC_SITE_URL="$SITE_URL" npm run build:aws
 
       # Before the new code goes live, so its pages never point at files that aren't there yet.

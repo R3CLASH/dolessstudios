@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { gsap, ScrollTrigger, prefersReducedMotion } from "@/lib/gsap";
-import { NAV, SERVICES, PROJECTS } from "@/lib/content";
+import { NAV, PROJECTS, SERVICES, getSolution } from "@/lib/content";
 import { Mark } from "@/components/brand/Mark";
 import { scrollToTop } from "./SmoothScroll";
 
@@ -16,6 +16,7 @@ function labelFor(pathname: string) {
   if (nav) return nav.label;
   const [, section, slug] = pathname.split("/");
   if (section === "services") return SERVICES.find((s) => s.slug === slug)?.short ?? "Services";
+  if (section === "off-the-shelf") return getSolution(slug)?.vertical ?? "Off the shelf";
   if (section === "work") return PROJECTS.find((p) => p.slug === slug)?.title ?? "Work";
   return "Somewhere";
 }
