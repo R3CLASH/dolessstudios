@@ -37,10 +37,10 @@ Decisions already made (do not re-litigate — the user chose these):
 | Route | `/off-the-shelf`, `/off-the-shelf/[slug]` |
 | Verticals | trades · restaurant/salon · clinic · startup/SaaS |
 | Delivery | **done-for-you** — we deploy on their domain and hand over. Payment buys a build slot, not a download |
-| Prices | LKR 89,990 / 89,990 / 119,990 / 69,990, paid in full up front. The Dodo products are priced in RUPEES; the dollar figures on the site ($271 / $271 / $361 / $211) are derived from them at `LKR_PER_USD` and drift with the rate. See the header comment in `src/lib/money.ts`. |
+| Prices | LKR 89,990 / 89,990 / 119,990 / 69,990, paid in full up front, and that is what the site now shows as the price. The dollar figures beside them (≈ $271 / $271 / $361 / $211) are derived at `LKR_PER_USD` and drift with the rate, so they are always rendered behind a `≈` and never used anywhere binding. See the header comment in `src/lib/money.ts`. |
 | Buy flow | **hybrid** — 0 add-ons → instant checkout; 1+ → quote form |
 | Payments | **Dodo Payments**, not Stripe |
-| Currency | USD base; LKR appears at checkout via Dodo Adaptive Currency |
+| Currency | **LKR base** — `BASE_CURRENCY`, every `priceCents` in the catalog, and what Dodo charges. An overseas card is converted *from* the rupee price by Adaptive Currency at Dodo's own rate, shown to the buyer before they confirm. Payouts still settle to us in USD. |
 | Hosting/domain | deliberately off the public page; settled in conversation |
 
 The original plan is at `~/.claude/plans/we-built-doless-recently-dreamy-tiger.md`.
@@ -187,7 +187,8 @@ The code is in place and dormant. To switch it on:
   image is served. Caveat: `next/og` on the arm64 Lambda needs a bundled font and adds weight.
 - Homepage band after `ServicesRail`: "Or take one that already exists →"
 - `scripts/check-dodo-prices.ts` + `npm run check:prices`: fail if a dashboard price disagrees with
-  `priceCents`. Add to `deploy.yml` as a **non-blocking** warning, not to `ci.yml` (no key there).
+  `priceCents`. Now a straight integer comparison, both sides being LKR minor units — no conversion, so
+  the check is exact rather than tolerance-based. Add to `deploy.yml` as a **non-blocking** warning, not to `ci.yml` (no key there).
 - `webhook_events` table — only if events stop being 1:1 with a payment. `orders.payment_id` is enough today,
   and the replay test confirms it.
 - Deeper demos (the sales pages advertise 7 pages; demos have 3). Decide whether the gap matters.
@@ -196,9 +197,11 @@ The code is in place and dormant. To switch it on:
 
 - **Hosting and domain ownership** was deferred and is still absent from the public pages. It needs an
   answer before the first real sale, even if only in the handover email.
-- **`LKR_PER_USD` in `src/lib/money.ts` is a hardcoded 305**, display-only, last set 2026-11-15. Nothing
-  charges at this rate, but it drifts. There is no reminder mechanism.
-- **Base price vs margin.** At roughly $211–$361 a done-for-you build is close to break-even once branding and
+- **`LKR_PER_USD` in `src/lib/money.ts` is a hardcoded 332**, last set 2026-11-21. Since the catalog went
+  LKR-denominated this is display-only in the strict sense: no stored price derives from it any more, so a
+  stale rate makes the small grey `≈ $` approximation wrong rather than the headline price. It still drifts,
+  and there is still no reminder mechanism.
+- **Base price vs margin.** At LKR 69,990–119,990 (roughly $211–$361) a done-for-you build is close to break-even once branding and
   content are done; the add-ons carry the margin. The user chose this knowingly. Revisit after ~5 sales.
 
 ### 3.6 Needs a human with a browser
@@ -388,7 +391,7 @@ automated safety net.
 
 ```
 src/lib/content.ts                      SOLUTIONS, ADD_ONS, NAV, SOLUTION_STEPS/FAQ, LEGAL — the data model
-src/lib/money.ts                        USD minor units, the one formatter, display-only LKR rate
+src/lib/money.ts                        LKR minor units, the one formatter, the display-only USD rate
 src/lib/solutions.ts                    checkoutHrefFor() — the capability flag (runs at BUILD time)
 src/lib/dodo.ts                         Dodo config, all read inside functions; fetchPayment()
 src/lib/orders.ts                       webhook -> orders row, the idempotency gate, never throws

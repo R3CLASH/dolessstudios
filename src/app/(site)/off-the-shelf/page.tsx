@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ADDON_GROUPS, ADD_ONS, SITE, SOLUTIONS, SOLUTION_INCLUDED, SOLUTION_STEPS } from "@/lib/content";
-import { formatMoney } from "@/lib/money";
+import { BASE_CURRENCY, formatMoney } from "@/lib/money";
 import { PageHero } from "@/components/sections/PageHero";
 import { SolutionGrid } from "@/components/solutions/SolutionGrid";
 import { AutoChecklist } from "@/components/sections/AutoChecklist";
@@ -41,7 +41,7 @@ const jsonLd = {
     name: `${s.vertical} website (${s.title})`,
     description: s.tagline,
     price: (s.priceCents / 100).toFixed(2),
-    priceCurrency: "USD",
+    priceCurrency: BASE_CURRENCY,
     availability: "https://schema.org/InStock",
     url: `${SITE.url}/off-the-shelf/${s.slug}`,
   })),
