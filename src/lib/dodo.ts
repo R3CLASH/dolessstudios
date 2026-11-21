@@ -50,6 +50,25 @@ export function productIdFor(solution: Solution): string | null {
   return solution.dodoProductId[dodoEnv() === "live_mode" ? "live" : "test"] || null;
 }
 
+/**
+ * One product id outside the catalog that /checkout will still accept.
+ *
+ * This exists for a single question: can a Sri Lankan account actually receive a
+ * payout? Dodo's minimum payout is $50, measured after fees and impossible to
+ * lower, so the only way to find out is to put a real sale of more than that
+ * through live mode — and none of our four solutions is the right thing to sell
+ * to ourselves. So: one deliberately-named product, bought once, by us.
+ *
+ * Narrow on purpose. It is a single exact id, never a pattern or a bypass of the
+ * catalog check, it is unset in every environment that is not running the test,
+ * and removing the variable closes it again with no code change. Not a secret —
+ * knowing the id only lets you pay us — but absent must read as absent, hence the
+ * null rather than an empty string.
+ */
+export function testProductId(): string | null {
+  return process.env.DODO_TEST_PRODUCT_ID || null;
+}
+
 /** One client per server process, built on first use so an unkeyed build can't trip over it. */
 function client(): DodoPayments | null {
   const bearerToken = dodoKey();

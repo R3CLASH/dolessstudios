@@ -34,6 +34,10 @@ locals {
       # distribution); the app derives it from SITE.url instead.
       DODO_PAYMENTS_API_KEY     = var.dodo_api_key
       DODO_PAYMENTS_WEBHOOK_KEY = var.dodo_webhook_key
+      # In the conditional half with the rest of the optional values. testProductId()
+      # coerces "" to null anyway, so this is consistency rather than a fix: an unset
+      # variable should mean an unset env var, the same as it does locally.
+      DODO_TEST_PRODUCT_ID = var.dodo_test_product_id
     } : k => v if v != "" },
   )
 }

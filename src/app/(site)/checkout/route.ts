@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Checkout } from "@dodopayments/nextjs";
 import { SOLUTIONS } from "@/lib/content";
-import { dodoEnv, dodoKey, dodoReturnUrl, productIdFor } from "@/lib/dodo";
+import { dodoEnv, dodoKey, dodoReturnUrl, productIdFor, testProductId } from "@/lib/dodo";
 
 /**
  * Hands a buyer over to Dodo's hosted checkout for one solution, bought as-is.
@@ -44,14 +44,21 @@ export async function GET(req: NextRequest) {
   // a checkout for an arbitrary product on our account, and means the metadata the
   // webhook later trusts is ours rather than the caller's.
   const productId = req.nextUrl.searchParams.get("productId");
-  const solution = productId ? SOLUTIONS.find((s) => productIdFor(s) === productId) : undefined;
-  if (!productId || !solution) {
+
+  // The one id outside the catalog we accept: the payout test product, matched
+  // exactly and only while DODO_TEST_PRODUCT_ID is set (see testProductId). It is
+  // tagged metadata_test rather than metadata_solution, which is what makes
+  // solutionFromPayment() correctly find no solution and the order row say so.
+  const isTest = productId !== null && productId === testProductId();
+  const solution = !isTest && productId ? SOLUTIONS.find((s) => productIdFor(s) === productId) : undefined;
+  if (!productId || (!isTest && !solution)) {
     return bail(req, `productId ${JSON.stringify(productId)} is not in the catalog for ${dodoEnv()}`);
   }
 
   const upstream = new URL(req.nextUrl.origin + req.nextUrl.pathname);
   upstream.searchParams.set("productId", productId);
-  upstream.searchParams.set("metadata_solution", solution.slug);
+  if (solution) upstream.searchParams.set("metadata_solution", solution.slug);
+  else upstream.searchParams.set("metadata_test", "1");
 
   const handler = Checkout({
     bearerToken: key,

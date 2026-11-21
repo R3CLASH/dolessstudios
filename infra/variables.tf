@@ -86,6 +86,12 @@ variable "dodo_webhook_key" {
   sensitive   = true
 }
 
+variable "dodo_test_product_id" {
+  description = "Temporary. One Dodo product id outside the catalog that /checkout will accept, for the Sri Lanka payout test. Not a secret — knowing it only lets someone pay us. Unset it and redeploy once the test is done."
+  type        = string
+  default     = ""
+}
+
 variable "dodo_environment" {
   description = "Which Dodo mode to use. Defaults to test_mode on purpose: the SDK falls back to live_mode when this is unset, and a half-configured production must not be able to charge a real card."
   type        = string
