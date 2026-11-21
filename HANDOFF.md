@@ -1,6 +1,6 @@
 # Off the shelf — handoff
 
-**As of 2026-11-21.** **Phases 1, 2 and 3 are built and merged to `main`.** Catalog, demos, Dodo
+**As of 2026-11-21.** **Phases 1, 2, 3 and the custom checkout are built.** Catalog, demos, Dodo
 checkout, orders and webhooks are all deployed and all dormant: every `dodoProductId` slot is `null`
 and no key is set, so no buy button renders and every CTA routes to the quote form. What is left is
 configuration (a Dodo account, product ids, keys) and §3.4 polish. Read this before touching the
@@ -138,7 +138,7 @@ swapped — the capability flag in `src/lib/solutions.ts` is the only integratio
 
 The code is in place and dormant. To switch it on:
 
-1. **Create 4 products per mode (8 total)** in the Dodo dashboard, USD, Adaptive Currency on, and
+1. **Create 4 products per mode (8 total)** in the Dodo dashboard, **LKR**, Adaptive Currency on, and
    paste the ids into the `dodoProductId` slots in `src/lib/content.ts` (lines ~277, 320, 363, 406).
 2. **Register the webhook** at `https://<site>/api/webhook/dodo-payments`, **separately in test and
    live**, each with its own signing key. Subscribe to **only** `payment.succeeded`,
@@ -179,6 +179,54 @@ The code is in place and dormant. To switch it on:
   `dynamic`/`revalidate` are only removed when Cache Components is enabled, which `next.config.ts`
   does not do. What actually keeps CloudFront off `/checkout` is the `no-store` header, because the
   default cache behaviour does list GET in `cached_methods`.
+
+### 3.3b BUILT — the custom checkout page, order references and order pages
+
+Added after a test purchase showed two gaps: the buyer was handed to an unstyled Dodo page, and
+came back to a thanks page with no number on it.
+
+- **`/off-the-shelf/[slug]/buy`** is now the checkout. Prerendered like the detail page; the
+  payment frame is Dodo's, embedded via `dodopayments-checkout` (`displayType: "inline"`) and
+  themed from `BRAND_THEME` in `lib/dodo.ts`. `SolutionConfigurator`'s as-is CTA points here and
+  **no longer carries `data-no-transition`** — it is a real page now, so the curtain should run.
+- **`POST /api/checkout/session`** mints the session. Same posture as `/checkout`: the request
+  carries a *slug*, the server resolves the product id from the catalog, and the solution metadata
+  is set server-side. `force-dynamic` + `no-store`.
+- **`orders.reference`** (`drizzle/0003_*.sql`, nullable + UNIQUE) holds a `DLS-XXXXXXXX` string
+  **derived from `payment_id`** by `lib/orderRef.ts`. Deriving rather than randomising is the
+  whole trick: the buyer is routinely back on `/thanks` before the webhook lands, and a reference
+  that lived only on the row would be blank in exactly that moment. Both sides compute the same
+  string, and a replay can't mint a second one.
+- **`/orders/[ref]?t=…`** is the buyer's order page, linked from the confirmation email. The `t`
+  is an HMAC of the reference under **`ORDER_LINK_SECRET`** — a ~40-bit reference is an identifier,
+  not a bearer token, so the page `notFound()`s without a valid signature rather than 401-ing
+  (which would confirm the reference exists). Unset secret = link omitted from the email and the
+  page 404s; nothing throws.
+- **The summary agrees with the frame.** Dodo adds tax at checkout that our price pages never
+  mentioned — the thing that made a Rs 89,990 site arrive as £248.14. `CheckoutPanel` listens for
+  `checkout.breakdown` and shows Dodo's subtotal/tax/total once they arrive.
+
+Traps found while building it:
+
+- **`reactStrictMode` double-invokes the mount effect.** A `useRef` guard that survives the
+  teardown is *wrong* here: the first run's cleanup closes the frame and the second run then bails
+  out, leaving an empty box. The `cancelled` flag is the only correct guard — the first run's async
+  continuation drops out before it touches the SDK.
+- **The SDK runs iframe-resizer internally**, so the inline frame self-sizes. `min-h` is a floor,
+  not a height. Dodo also require the whole frame including its footer to be visible, so don't crop it.
+- **`font_primary_url` must be a stable public URL.** `next/font/local` fingerprints the emitted
+  filename at build, so the Bricolage woff2 is copied to `public/fonts/` for this. **That copy is
+  an infra change**: `local.public_paths` in `infra/cdn.tf` is generated from the `public/`
+  fileset, so it adds a `/fonts/*.*` CloudFront behavior pointing at S3 — which only exists after
+  an **Infra apply**. Deploy alone leaves `/fonts/bricolage-latin.woff2` falling through to the
+  default behavior, Dodo's fetch of it fails, and the checkout frame quietly renders in a system
+  font. Not fatal, but it is the difference between the embed looking like us and not. Same
+  ordering as trap #15: Infra apply, then Deploy. It also means a PR touching `public/**` runs
+  `infra.yml`'s Terraform validate, by design.
+- **No `checkout.completed` event exists** and the SDK gives no client-side payment id. Completion
+  is still the redirect to `return_url`; `/thanks` is still the thing that verifies.
+- **The buyer's email must come from Dodo or our row**, never the `email=` query param Dodo appends
+  to the return URL — same reasoning as `status`, which has always been declared and never read.
 
 ### 3.4 Phase 4 — polish
 
@@ -395,13 +443,19 @@ src/lib/money.ts                        LKR minor units, the one formatter, the 
 src/lib/solutions.ts                    checkoutHrefFor() — the capability flag (runs at BUILD time)
 src/lib/dodo.ts                         Dodo config, all read inside functions; fetchPayment()
 src/lib/orders.ts                       webhook -> orders row, the idempotency gate, never throws
+src/lib/orderRef.ts                     DLS-… reference derived from payment_id; signs /orders links
+src/lib/ratelimit.ts                    per-IP limiter, shared by actions.ts and /api/checkout/session
 src/lib/solutionInquiry.ts              quote schema, built from inquirySchema
 src/lib/actions.ts                      submitSolutionInquiry + the honeypot/rate-limit/clientIp helpers
 src/lib/mail.ts                         rowsTable(), sendSolutionInquiryEmail — order emails go here
 src/lib/demo/<slug>.ts                  fixture content for each demo's fake business
 
 src/app/(site)/off-the-shelf/           catalog + detail pages + thanks/
+src/app/(site)/off-the-shelf/[slug]/buy/  OUR checkout page (prerendered)
+src/app/(site)/orders/[ref]/            the buyer's order page, HMAC-gated
+src/app/(site)/api/checkout/session/    POST -> themed Dodo session (force-dynamic, no-store)
 src/app/(site)/checkout/route.ts        static GET -> unwraps the adaptor's JSON -> 303 to Dodo
+                                        (kept: hosted fallback + the payout-test hatch)
 src/app/(site)/api/webhook/dodo-payments/route.ts   signature verify -> orders.ts
 src/app/(demos)/                        demo root layout; demo/<slug>/ per vertical
 src/app/demo.css                        demos' theme + per-demo palettes (data-demo="<slug>")
@@ -409,7 +463,8 @@ src/app/(site)/{terms,privacy,refund-policy}/       the three documents live mod
 src/components/sections/LegalDoc.tsx    one renderer for all three; they can't drift in layout
 
 src/components/solutions/               SolutionGrid, SolutionConfigurator, SolutionQuoteForm,
-                                        SolutionDemo, DemoFrame, SolutionArt
+                                        SolutionDemo, DemoFrame, SolutionArt,
+                                        InlineCheckout, CheckoutPanel, OrderTimeline
 src/components/demo/                    DemoBar + per-vertical marks and forms
 src/components/ui/form.tsx              Chip/Err/field, shared with BriefForm
 

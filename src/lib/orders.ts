@@ -5,6 +5,7 @@ import { getDb, schema } from "@/db";
 import { SOLUTIONS, getSolution, type Solution } from "@/lib/content";
 import { productIdFor } from "@/lib/dodo";
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail, type OrderEmail } from "@/lib/mail";
+import { orderReference } from "@/lib/orderRef";
 
 /**
  * What a verified Dodo webhook does to our own records.
@@ -90,6 +91,10 @@ export async function recordPaidOrder(p: Payment): Promise<void> {
         .insert(schema.orders)
         .values({
           paymentId: p.payment_id,
+          // Derived from the payment id, so this is the same string the thanks
+          // page already printed before this row existed, and the same one a
+          // replayed event would compute. Storing it is for lookup, not safety.
+          reference: orderReference(p.payment_id),
           solution: solution?.slug ?? null,
           productId: p.product_cart?.[0]?.product_id ?? null,
           name: mail.name,
@@ -183,6 +188,25 @@ export async function markOrderRefunded(r: Refund): Promise<void> {
 /** Logs a failed payment. No row and no email — nothing was bought. */
 export function noteFailedPayment(p: Payment): void {
   console.warn("[order] payment failed", p.payment_id, p.error_code ?? "", p.error_message ?? "");
+}
+
+/**
+ * The order behind a /orders/[ref] visit, or null. Read-only, never throws.
+ *
+ * Note this does no authorisation of its own — the caller must have checked the
+ * signed token first. A reference is only ~40 bits and is printed on screen, so
+ * it is an identifier, not a secret.
+ */
+export async function findOrderByReference(reference: string) {
+  try {
+    const db = getDb();
+    if (!db) return null;
+    const rows = await db.select().from(schema.orders).where(eq(schema.orders.reference, reference)).limit(1);
+    return rows[0] ?? null;
+  } catch (err) {
+    console.error("[order] lookup by reference failed", reference, err);
+    return null;
+  }
 }
 
 /** The order behind a thanks-page visit, or null. Read-only, and never throws. */

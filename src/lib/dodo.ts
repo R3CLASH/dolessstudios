@@ -95,3 +95,90 @@ export async function fetchPayment(paymentId: string) {
     return null;
   }
 }
+
+/**
+ * The checkout frame, wearing our clothes.
+ *
+ * Dodo's `customization.theme_config` is the only theming channel left in the
+ * 2.x SDK — the client-side `themeConfig` option was removed in 2.0.1 — and it
+ * applies to the inline embed, the overlay and the hosted page alike. Which is
+ * the point of defining it once, here: if the inline embed ever has to fall back
+ * to the hosted page, the buyer sees the same thing either way.
+ *
+ * Every value is copied from the @theme block in globals.css. If a token moves
+ * there, move it here too; there is no build-time link between the two, because
+ * these have to travel to Dodo as plain JSON over the wire.
+ */
+const BRAND_THEME = {
+  // Served from public/fonts rather than src/app/fonts: next/font/local
+  // fingerprints the emitted filename at build, and Dodo needs a stable public
+  // https:// URL it can fetch months from now.
+  font_primary_url: `${SITE.url.replace(/\/$/, "")}/fonts/bricolage-latin.woff2`,
+  font_size: "md",
+  font_weight: "medium",
+  radius: "16px",
+  dark: {
+    bg_primary: "#121316", // --color-ink
+    bg_secondary: "#1a1c21", // --color-ink-2
+    border_primary: "#2c2f36", // --color-line
+    border_secondary: "#24272e", // --color-ink-3
+    button_primary: "#ff5a1f", // --color-accent
+    button_primary_hover: "#eff1f3", // --color-paper, matching .btn-accent's wipe
+    button_text_primary: "#121316", // --color-ink
+    button_secondary: "#1a1c21",
+    button_text_secondary: "#eff1f3",
+  },
+} as const;
+
+/**
+ * Mints a checkout session for one solution, bought as-is.
+ *
+ * This goes through the REST SDK rather than the @dodopayments/nextjs adaptor
+ * because the adaptor's Checkout only builds static and dynamic *links*, and a
+ * link cannot carry `customization`. /checkout/route.ts still uses the adaptor
+ * and still works — it is the fallback, and the DODO_TEST_PRODUCT_ID payout
+ * hatch runs through it.
+ *
+ * Returns null rather than throwing on every failure path, so an unkeyed build
+ * and a Dodo outage look the same to the caller: no session, show the quote form.
+ */
+export async function createCheckoutSession(
+  solution: Solution,
+): Promise<{ checkoutUrl: string; sessionId: string } | null> {
+  const c = client();
+  const productId = productIdFor(solution);
+  if (!c || !productId) return null;
+
+  try {
+    const session = await c.checkoutSessions.create({
+      product_cart: [{ product_id: productId, quantity: 1 }],
+      return_url: dodoReturnUrl(),
+      // Set here, server-side, from our own catalog — never from the request.
+      // solutionFromPayment() trusts this value later, so it has to be ours.
+      metadata: { solution: solution.slug },
+      feature_flags: {
+        // One page: the frame initialises the payment on load and confirms it in
+        // place, instead of handing off to a second payment page inside the
+        // iframe. An embed that navigates internally reads as broken.
+        single_page: true,
+      },
+      customization: {
+        theme: "dark",
+        show_order_details: true,
+        // Only settable while single_page is true.
+        payment_method_layout: "accordion",
+        theme_config: BRAND_THEME,
+      },
+    });
+
+    const checkoutUrl = session.checkout_url;
+    if (!checkoutUrl) {
+      console.error("[dodo] session created with no checkout_url", session.session_id);
+      return null;
+    }
+    return { checkoutUrl, sessionId: session.session_id };
+  } catch (err) {
+    console.error("[dodo] could not create a checkout session for", solution.slug, err);
+    return null;
+  }
+}

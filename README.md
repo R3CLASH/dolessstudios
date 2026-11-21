@@ -36,6 +36,10 @@ src/
   lib/inquiry.ts          contact form options + zod schema, shared by the form and the server action
   lib/mail.ts             SMTP transport (nodemailer) that emails each brief
   lib/gsap.ts             GSAP plugin registration + useGsap hook (scoped context, auto-cleanup)
+  lib/dodo.ts             Dodo config, the brand theme sent to checkout, createCheckoutSession()
+  lib/orders.ts           webhook -> orders row, idempotent on payment_id, never throws
+  lib/orderRef.ts         the "DLS-…" reference (derived from payment_id) + signed /orders links
+  lib/ratelimit.ts        per-IP in-memory limiter, shared by the server actions and /api routes
   db/                     Drizzle schema + lazy connection
   components/
     shell/                header + to-do menu, command palette, page transition, cursor, preloader, footer, Lenis
@@ -44,6 +48,40 @@ src/
   app/fonts/              self-hosted Bricolage Grotesque (variable) + JetBrains Mono
 drizzle/                  SQL migrations
 ```
+
+## Buying off the shelf
+
+Four prebuilt sites with public fixed prices. Tick no add-ons and you can buy one outright; tick
+any and it routes to a quote form instead. The money path:
+
+```
+/off-the-shelf/[slug]          the sales page; SolutionConfigurator decides buy vs quote
+/off-the-shelf/[slug]/buy      OUR checkout page — order summary + Dodo's frame embedded in it
+POST /api/checkout/session     mints the themed Dodo session (force-dynamic, no-store)
+  -> Dodo takes the payment, then redirects to:
+/off-the-shelf/thanks          verifies server-side, shows the order reference
+POST /api/webhook/dodo-payments  writes the orders row and sends both emails
+/orders/[ref]?t=…              the buyer's order page, opened from the confirmation email
+```
+
+Things that look like choices but aren't:
+
+- **Dodo owns the card fields.** They are the Merchant of Record, which is what makes them
+  responsible for sales tax in ~70 jurisdictions. Their checkout frame is embedded in our page via
+  `dodopayments-checkout` in `displayType: "inline"`, themed from `BRAND_THEME` in `lib/dodo.ts`.
+  We never see a card number, and a hand-built payment form is not an option.
+- **No client event proves payment.** Dodo publish no `checkout.completed` and no client-side
+  payment id. `/off-the-shelf/thanks` re-verifies server-side in three tiers (ask Dodo, then our
+  own row, then commit to nothing), and the webhook is the real record.
+- **The order reference is derived from the payment id,** not random — see `lib/orderRef.ts`. That
+  is what lets the thanks page print it before the webhook has landed.
+- **`/orders/[ref]` is gated by an HMAC in the link,** not by a login. There are no user accounts;
+  `CustomerPortal` from the Dodo adaptor must not be deployed, because it doesn't authenticate.
+- **Order status is advanced by hand** in `npm run db:studio`. The `orders` table is the build
+  queue; there is deliberately no admin UI.
+
+`/checkout` (the older static-link route) still exists as the hosted fallback and is the route the
+Sri Lanka payout test runs through. See `HANDOFF.md`.
 
 ## The concept, by section
 

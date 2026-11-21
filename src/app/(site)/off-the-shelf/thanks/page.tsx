@@ -4,6 +4,9 @@ import { SOLUTION_WE_NEED, SITE, getSolution, type Solution } from "@/lib/conten
 import { BASE_CURRENCY, formatMoney } from "@/lib/money";
 import { fetchPayment } from "@/lib/dodo";
 import { findOrderByPaymentId, solutionFromPayment } from "@/lib/orders";
+import type { Order } from "@/db/schema";
+import { orderLink, orderReference } from "@/lib/orderRef";
+import { OrderTimeline } from "@/components/solutions/OrderTimeline";
 import { PageHero } from "@/components/sections/PageHero";
 import { Eyebrow, Reveal } from "@/components/ui/motion";
 
@@ -30,6 +33,14 @@ type Resolved = {
   solution: Solution | undefined;
   amountCents: number | null;
   currency: string | null;
+  /**
+   * Who the receipt went to. Always from Dodo or from our own row — never from
+   * the `email=` query param Dodo appends to the return URL, for the same
+   * reason `status` is declared below and deliberately never read.
+   */
+  email: string | null;
+  /** Null until the webhook has landed; the reference itself doesn't need it. */
+  status: Order["status"] | null;
 };
 
 /**
@@ -38,7 +49,14 @@ type Resolved = {
  * otherwise commit to nothing.
  */
 async function resolve(paymentId: string | undefined): Promise<Resolved> {
-  const unsure: Resolved = { outcome: "unsure", solution: undefined, amountCents: null, currency: null };
+  const unsure: Resolved = {
+    outcome: "unsure",
+    solution: undefined,
+    amountCents: null,
+    currency: null,
+    email: null,
+    status: null,
+  };
   if (!paymentId) return unsure;
 
   // Tier 1: authoritative. Also dodges the race where the buyer gets back here
@@ -57,6 +75,10 @@ async function resolve(paymentId: string | undefined): Promise<Resolved> {
       solution: solutionFromPayment(payment),
       amountCents: payment.total_amount ?? null,
       currency: payment.currency ?? null,
+      email: payment.customer?.email ?? null,
+      // Dodo knows the payment succeeded; only our own row knows whether we
+      // have started building. Tier 1 therefore can't fill this in.
+      status: null,
     };
   }
 
@@ -68,6 +90,8 @@ async function resolve(paymentId: string | undefined): Promise<Resolved> {
       solution: order.solution ? getSolution(order.solution) : undefined,
       amountCents: order.amountCents,
       currency: order.currency,
+      email: order.email,
+      status: order.status,
     };
   }
 
@@ -82,7 +106,14 @@ export default async function ThanksPage({
 }) {
   const sp = await searchParams;
   const paymentId = typeof sp.payment_id === "string" ? sp.payment_id : undefined;
-  const { outcome, solution, amountCents, currency } = await resolve(paymentId);
+  const { outcome, solution, amountCents, currency, email, status } = await resolve(paymentId);
+
+  // Derived from the payment id, so it survives the race this page was built
+  // around: the buyer is very often back here before Dodo's webhook has landed,
+  // and a reference that lived on the orders row would be blank in exactly the
+  // moment they most want a number to hold on to.
+  const reference = paymentId ? orderReference(paymentId) : null;
+  const trackHref = reference ? orderLink(reference) : null;
 
   const paid = outcome === "paid";
   const heavy = paid ? "You're booked" : outcome === "not-paid" ? "Not paid" : "Thank you";
@@ -120,6 +151,24 @@ export default async function ThanksPage({
                   <p className="mt-2 text-mist">Paid {formatMoney(amountCents, currency ?? BASE_CURRENCY)}</p>
                 )}
                 {solution && <p className="mt-1 text-mist">{solution.turnaround}</p>}
+
+                {reference && (
+                  <div className="mt-6 rounded-2xl border border-line bg-ink-2 p-5">
+                    <span className="eyebrow">Your order</span>
+                    <p className="mt-2 select-all font-mono text-[clamp(1.3rem,3vw,1.7rem)] tracking-tight text-accent">
+                      {reference}
+                    </p>
+                    <p className="mt-2 text-sm text-mist">
+                      Quote this if you need to ask us anything about the build.
+                    </p>
+                  </div>
+                )}
+
+                {email && (
+                  <p className="mt-4 text-sm text-mist">
+                    Confirmation sent to <span className="text-paper">{email}</span>.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -150,14 +199,31 @@ export default async function ThanksPage({
             </Reveal>
           )}
 
+          {paid && (
+            <Reveal className="mt-16 border-t border-line pt-10">
+              <Eyebrow index="03">Where it&apos;s at</Eyebrow>
+              <div className="mt-6 max-w-2xl">
+                <OrderTimeline status={status ?? "paid"} />
+              </div>
+            </Reveal>
+          )}
+
           <Reveal className={paid ? "mt-16" : ""}>
             <div className="flex flex-wrap gap-4">
+              {paid && trackHref && (
+                <a href={trackHref} className="btn btn-accent">
+                  View your order →
+                </a>
+              )}
               {outcome === "not-paid" && solution && (
                 <Link href={`/off-the-shelf/${solution.slug}`} className="btn btn-accent">
                   Back to {solution.title} →
                 </Link>
               )}
-              <Link href="/off-the-shelf" className={outcome === "not-paid" ? "btn btn-ghost" : "btn btn-accent"}>
+              <Link
+                href="/off-the-shelf"
+                className={outcome === "not-paid" || (paid && trackHref) ? "btn btn-ghost" : "btn btn-accent"}
+              >
                 {outcome === "not-paid" ? "See all four" : "Browse the others →"}
               </Link>
             </div>

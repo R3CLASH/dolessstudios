@@ -4,6 +4,7 @@ import { BRIEF_SERVICES, type Inquiry } from "@/lib/inquiry";
 import { SOLUTION_WE_NEED, type AddOn, type Solution } from "@/lib/content";
 import type { SolutionInquiry } from "@/lib/solutionInquiry";
 import { BASE_CURRENCY, formatMoney } from "@/lib/money";
+import { orderLink, orderReference } from "@/lib/orderRef";
 
 const globalForMail = globalThis as unknown as { __dlsMail?: Transporter };
 
@@ -168,6 +169,10 @@ const charged = (cents: number | null, currency: string | null) =>
 /** The rows both order emails share, so the two can't disagree about the money. */
 function orderRows(o: OrderEmail): [string, string][] {
   const rows: [string, string][] = [
+    // First, because it is the one line either side will quote back at the
+    // other. Derived from the payment id, so it matches what the thanks page
+    // showed even if this email and that page disagree about everything else.
+    ["Order", orderReference(o.paymentId)],
     ["Bought", o.solution ? `${o.solution.title} — ${o.solution.vertical}` : "(unknown solution)"],
     ["Charged", charged(o.amountCents, o.currency)],
   ];
@@ -262,6 +267,13 @@ export async function sendOrderConfirmationEmail(o: OrderEmail): Promise<boolean
   const closing =
     "Dodo Payments handles the payment and will email you its own receipt — this note isn't a tax invoice.";
 
+  // The only way into the order page: the reference alone is too thin to be a
+  // bearer token, so the link carries a signature. Null when ORDER_LINK_SECRET
+  // isn't set, in which case the email simply doesn't mention it — the same
+  // "absent reads as absent" shape as getDb() and getTransport().
+  const link = orderLink(orderReference(o.paymentId));
+  const linkLine = link ? `Track it any time: ${link}` : null;
+
   try {
     await transport.sendMail({
       from: from(),
@@ -271,7 +283,9 @@ export async function sendOrderConfirmationEmail(o: OrderEmail): Promise<boolean
       text:
         `${intro}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n` +
         `To get started we need three things:\n${SOLUTION_WE_NEED.map((n) => `  • ${n}`).join("\n")}\n\n` +
-        `Just reply to this email with them.\n\n${closing}\n`,
+        `Just reply to this email with them.\n\n` +
+        (linkLine ? `${linkLine}\n\n` : "") +
+        `${closing}\n`,
       html:
         `<p style="font-family:system-ui,sans-serif;font-size:15px;margin:0 0 16px">${esc(intro)}</p>` +
         rowsTable(rows) +
@@ -280,6 +294,9 @@ export async function sendOrderConfirmationEmail(o: OrderEmail): Promise<boolean
           (n) => `<li>${esc(n)}</li>`,
         ).join("")}</ul>` +
         `<p style="font-family:system-ui,sans-serif;font-size:15px;margin:16px 0 0">Just reply to this email with them.</p>` +
+        (link
+          ? `<p style="font-family:system-ui,sans-serif;font-size:15px;margin:16px 0 0"><a href="${esc(link)}" style="color:#d2410f">Track your order →</a></p>`
+          : "") +
         `<p style="font-family:system-ui,sans-serif;font-size:13px;color:#666;margin:20px 0 0">${esc(closing)}</p>`,
     });
     return true;
