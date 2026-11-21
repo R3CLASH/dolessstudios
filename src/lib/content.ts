@@ -273,8 +273,8 @@ export const SOLUTIONS: Solution[] = [
       "Paying a directory to list you",
     ],
     turnaround: "Live in 5 working days",
-    priceCents: 24_900,
-    dodoProductId: { test: null, live: null },
+    priceCents: 27_100, // = LKR 89,990 at LKR_PER_USD; the Dodo product is priced in rupees
+    dodoProductId: { test: "pdt_0NsQDij9Er4BGovxN4tAj", live: null },
     demo: { path: "/demo/trades", host: "voltelectric.lk" },
     accent: "#ff5a1f",
     services: ["web", "automation"],
@@ -316,8 +316,8 @@ export const SOLUTIONS: Solution[] = [
       "Explaining where to park",
     ],
     turnaround: "Live in 5 working days",
-    priceCents: 24_900,
-    dodoProductId: { test: null, live: null },
+    priceCents: 27_100, // = LKR 89,990 at LKR_PER_USD; the Dodo product is priced in rupees
+    dodoProductId: { test: "pdt_0NsQGNpw8CQIMpVDxY34F", live: null },
     demo: { path: "/demo/restaurant", host: "kolambakitchen.lk" },
     accent: "#c8f04a",
     services: ["web"],
@@ -359,8 +359,8 @@ export const SOLUTIONS: Solution[] = [
       "Chasing a web developer to fix one date",
     ],
     turnaround: "Live in 7 working days",
-    priceCents: 34_900,
-    dodoProductId: { test: null, live: null },
+    priceCents: 36_100, // = LKR 119,990 at LKR_PER_USD; the Dodo product is priced in rupees
+    dodoProductId: { test: "pdt_0NsQGgyhCXzn5Mw4Wb6g9", live: null },
     demo: { path: "/demo/clinic", host: "serendibdental.lk" },
     accent: "#2fb5a0",
     services: ["web", "automation"],
@@ -402,8 +402,8 @@ export const SOLUTIONS: Solution[] = [
       "Rebuilding the page when the pitch changes",
     ],
     turnaround: "Live in 3 working days",
-    priceCents: 19_900,
-    dodoProductId: { test: null, live: null },
+    priceCents: 21_100, // = LKR 69,990 at LKR_PER_USD; the Dodo product is priced in rupees
+    dodoProductId: { test: "pdt_0NsQGn1qe61XBQIMjlB81", live: null },
     demo: { path: "/demo/startup", host: "sheetfast.io" },
     accent: "#7b6cf6",
     services: ["web", "web-apps"],
@@ -1050,7 +1050,7 @@ export type LegalPage = {
   sections: LegalSection[];
 };
 
-const LEGAL_UPDATED = "20 November 2026";
+const LEGAL_UPDATED = "21 November 2026";
 
 export const LEGAL: LegalPage[] = [
   {
@@ -1096,7 +1096,8 @@ export const LEGAL: LegalPage[] = [
       {
         heading: "Prices, payment and tax",
         body: [
-          "Published prices are in US dollars and are the full price of the work. Any rupee figure shown next to a price is an approximate conversion for your convenience only, and nothing is ever charged at it.",
+          "Our prices are set in Sri Lankan rupees, and the rupee figure is the price of the work. The US dollar figure shown alongside it is a conversion for convenience and moves with the exchange rate, so treat it as close rather than exact.",
+          "If you pay with a card issued outside Sri Lanka, our payment processor converts the rupee price at its own rate at the moment you pay and shows you that amount before you confirm. The amount on your statement is therefore what you agreed to, and it may differ slightly from the dollar figure on this site. Your bank may add its own foreign transaction fee, which is between you and them.",
           "Payments are processed by Dodo Payments, which acts as merchant of record for the sale. Your card details are handled entirely by them and never reach us or our servers. Dodo issues the receipt for your purchase, and that receipt rather than anything on our site is the tax document for it.",
           "Any tax Dodo is required to collect in your country is added at checkout and shown before you pay. Third-party costs — domain registration, paid plugins, app subscriptions, hosting beyond what we set up — are billed to you by those providers and are not included unless the scope says so.",
         ],
