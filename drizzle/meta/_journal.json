@@ -29,6 +29,13 @@
       "when": 1795275581804,
       "tag": "0003_silly_sue_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795289689145,
+      "tag": "0004_oval_zarda",
+      "breakpoints": true
     }
   ]
 }

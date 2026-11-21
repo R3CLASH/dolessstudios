@@ -10,6 +10,14 @@ import { headers } from "next/headers";
  * guards (form posts and checkout sessions), neither acceptable if it ever
  * guards something that costs real money per call. Revisit if that changes.
  *
+ * It also fronts the /admin login, where the same caveats are sharper: n warm
+ * instances multiply the attempt budget by n, a cold start resets it to empty,
+ * and the key is the IP, so rotating IPs defeat it entirely. There it blunts a
+ * naive script and produces the only attack signal this stack can emit (a line
+ * in CloudWatch). **The password's entropy is the actual defence** — see the
+ * generate-don't-choose note in .env.example. Do not mistake five-per-ten-
+ * minutes for a security control.
+ *
  * Lives here rather than in actions.ts so the route handlers can share it:
  * actions.ts is "use server", and importing it from a route handler would drag
  * the whole server-action module graph along with it.

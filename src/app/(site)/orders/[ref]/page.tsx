@@ -20,9 +20,16 @@ import { Eyebrow, Reveal } from "@/components/ui/motion";
  * one. A bad or missing token is a notFound(), not a 401, so the route can't be
  * used to find out which references exist.
  *
- * No accounts, no passwords, no sessions. For a handful of products bought once each,
- * a signed link does the whole job an account would, and there is no login to
- * forget a year later.
+ * No accounts, no passwords, no sessions — **for buyers**. For a handful of
+ * products bought once each, a signed link does the whole job an account would,
+ * and there is no login to forget a year later.
+ *
+ * The studio side is a separate and deliberately unconnected mechanism: a shared
+ * password and a signed cookie at /admin (lib/adminSession.ts), scoped to
+ * Path=/admin so its cookie is never even sent to this route. Don't wire the two
+ * together — this page's access control is the token in the link, and nothing
+ * else. Note also that orders.notes is internal: it must never be rendered here,
+ * even though the row is in scope.
  */
 
 export const metadata: Metadata = {

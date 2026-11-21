@@ -90,6 +90,12 @@ data "aws_cloudfront_origin_request_policy" "all_viewer_except_host" {
   name = "Managed-AllViewerExceptHostHeader"
 }
 
+# /admin must never be cached anywhere. See the behavior below for why this is a
+# CDN concern and not only an app one.
+data "aws_cloudfront_cache_policy" "disabled" {
+  name = "Managed-CachingDisabled"
+}
+
 # Pages are cached for as long as the server's Cache-Control allows (prerendered pages: until the next deploy,
 # which invalidates everything). The headers are the ones Next.js varies RSC responses on.
 resource "aws_cloudfront_cache_policy" "server" {
@@ -151,6 +157,8 @@ locals {
   # OpenNext copies public/ to the root of .open-next/assets, so the two give the same list.
   # Folders only match names with an extension: public/work/*.webp shares /work/ with the /work/[slug] pages.
   # Dotfiles are skipped so a stray (gitignored) public/.DS_Store can't make a local plan diverge from CI.
+  # Never create public/api/, a top-level public/checkout*, or public/admin* — each
+  # would generate an S3 behavior here that shadows the route of the same name.
   public_paths = distinct([
     for f in fileset("${path.module}/../public", "**") :
     (strcontains(f, "/") ? "/${split("/", f)[0]}/*.*" : "/${f}")
@@ -220,6 +228,36 @@ resource "aws_cloudfront_distribution" "site" {
       cache_policy_id        = data.aws_cloudfront_cache_policy.optimized.id
       compress               = true
       viewer_protocol_policy = "redirect-to-https"
+    }
+  }
+
+  # ── /admin ─────────────────────────────────────────────────────────────────
+  # The default behavior below would be WRONG for the admin area, and subtly so:
+  # aws_cloudfront_cache_policy.server sets cookie_behavior = "none", so the
+  # admin session cookie is NOT part of the cache key, while cookies are still
+  # forwarded to the origin and GET is in cached_methods. A cacheable /admin
+  # response would be stored by CloudFront and served to the next visitor with
+  # no cookie at all — the order book, to anyone who asked for the URL.
+  #
+  # The app sends `Cache-Control: no-store` on these paths (next.config.ts) and
+  # every admin route is force-dynamic. This behavior is the third layer, and
+  # the only one that still holds if someone adds an admin page that forgets the
+  # other two. Deleting it re-opens that hole quietly.
+  ordered_cache_behavior {
+    path_pattern             = "/admin*"
+    target_origin_id         = "api"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"] # server actions POST
+    cached_methods           = ["GET", "HEAD"]
+    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host.id
+    compress                 = true
+    viewer_protocol_policy   = "redirect-to-https"
+
+    # Not optional: API Gateway only answers to its own Host, and clientIp() —
+    # which the login rate limit keys on — reads the x-viewer-ip this sets.
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.forward_host.arn
     }
   }
 
