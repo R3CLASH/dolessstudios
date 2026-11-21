@@ -1,13 +1,23 @@
 # Off the shelf — handoff
 
-**As of 2026-11-15.** Everything below lives on branch `feat/off-the-shelf`, cut from `main` and not
-merged. **Phases 1, 2 and 3 are built** — catalog, demos, Dodo checkout, orders and webhooks. What is
-left is configuration (a Dodo account, product ids, keys) and §3.4 polish. Read this before touching
-the off-the-shelf feature; the "Traps" section exists because each one cost real time to find.
+**As of 2026-11-21.** **Phases 1, 2 and 3 are built and merged to `main`.** Catalog, demos, Dodo
+checkout, orders and webhooks are all deployed and all dormant: every `dodoProductId` slot is `null`
+and no key is set, so no buy button renders and every CTA routes to the quote form. What is left is
+configuration (a Dodo account, product ids, keys) and §3.4 polish. Read this before touching the
+off-the-shelf feature; the "Traps" section exists because each one cost real time to find.
 
-**Commit on the branch, never on `main`.** A push to `main` runs `deploy.yml` — terraform apply to
-production. Every other branch runs `ci.yml` (`npm ci && typecheck && build`, no secrets set) and
-deploys nothing. The branch is pushed to `origin` and its CI is green.
+**Commit on a branch, never on `main`.** Since `917a13b` the pipeline is two workflows, and the
+difference matters for everything below:
+
+| | `deploy.yml` (Deploy) | `infra.yml` (Infra) |
+|---|---|---|
+| Trigger | automatic on push to `main` | **`workflow_dispatch` only**, main-only |
+| Runs Terraform | **never** | validate on PR (no credentials), then plan → apply |
+| Targets from | SSM `/doless/deploy-targets`, written by apply | Terraform state |
+| Lambda code | `update-function-code`, keyed by `$GITHUB_SHA` | never — `ignore_changes` on the code attributes; functions are created from `infra/placeholder` |
+
+So a push to `main` deploys **code only**. Infra changes need a deliberate manual run. Every other
+branch runs `ci.yml` (`npm ci && typecheck && build`, no secrets set) and deploys nothing.
 
 ---
 
@@ -90,13 +100,36 @@ CTA routing to the quote form. See §3.1 and "What is left" below.
 
 ### 3.1 Prerequisite — confirm Dodo can actually pay Sri Lanka (blocks going live, not the code)
 
-Dodo's seller-eligibility list for Sri Lanka **is not publicly documented**. Checkout is built, but
-nothing can be sold through it until this is answered. Confirm with Dodo directly:
+**Researched 2026-11-20 against Dodo's own accepted-countries and payout pages. Half-answered.**
 
-- Can a Sri Lankan entity onboard and pass KYC?
-- Payout currency and destination (sources say USD/GBP/EUR; needs confirming for an LKR-settling bank)
-- Fees against a $199 ticket: roughly 4% + $0.40, +1.5% international, +$5 per payout under $1,000 —
-  about **$10–12 on a $199 sale**. Worth sanity-checking against the margin.
+- **Sri Lanka is on the accepted list** (item 150), for merchant accounts *and* payouts. The rule is
+  that eligibility keys off **the country that issued the government ID you verify with**, not where
+  the company is registered or pays tax. India, Nepal, Maldives and Bhutan are listed too; Pakistan
+  and Afghanistan are not, and Bangladesh is only grandfathered. So **onboarding is very likely a
+  yes — the payout leg is the real unknown.**
+- **Payout currency is USD, GBP or EUR, never LKR.** The LK bank receives USD and converts at its own
+  rate. Intermediary bank charges apply on top, plus a possible $5 fee on payouts under $1,000.
+- **The minimum payout threshold is $50 and cannot be lowered** (only raised, from Settings →
+  Payouts), and it is measured *after* fees. A $1 test product therefore proves nothing: the balance
+  sits there forever and no payout is ever initiated.
+- **Payout dates are fixed.** The 1st–15th pays out on the 18th; the 16th–end-of-month pays out on
+  the **4th** of the following month, then 1–5 business days to arrive. Daily payouts are explicitly
+  unavailable, so this question cannot be answered quickly.
+- **Live mode requires the site to carry public pricing, Terms, a Privacy Policy, a Refund &
+  Cancellation Policy and a contact route.** All five are now deployed — the three policy documents
+  landed with this merge, pricing came with the catalog, `/contact` already existed.
+- **Verification timing:** identity/business 24–72 working hours, bank info 1–2 working days, and
+  payouts additionally need Bank Verification approved **plus** a completed Monitoring Review.
+
+What remains is the empirical test: onboard with an LK ID and LK bank, sell one **$60** product on
+production (above the $50 floor after fees — about $56.30 nets through), and confirm the payout
+lands. **Do not refund that payment**; a refund reverses it and the payout never happens, which
+destroys the only thing being measured. Note the test product is not a catalog solution, so it needs
+the `DODO_TEST_PRODUCT_ID` hatch in `/checkout` — the route rejects any product id not in the
+catalog, by design.
+
+Stage 3 of that test — onboarding plus bank verification — **costs nothing and answers most of the
+question.** Only if it passes is there any reason to spend $60.
 
 If Dodo can't serve Sri Lanka, Phase 1 still works (quote and invoice) and the payment provider can be
 swapped — the capability flag in `src/lib/solutions.ts` is the only integration point in the UI.
@@ -114,8 +147,10 @@ The code is in place and dormant. To switch it on:
    errors.
 3. **Local**: set `DODO_PAYMENTS_*` in `.env` (see `.env.example`).
    **Production**: GitHub `production` environment — secrets `DODO_API_KEY`, `DODO_WEBHOOK_KEY`,
-   variable `DODO_ENVIRONMENT`.
-4. **Redeploy.** Not optional — see trap #13.
+   variable `DODO_ENVIRONMENT`. **Set the secrets before the mode variable**: both workflows refuse
+   a `live_mode` run with an empty key, on purpose.
+4. **Run Infra (apply), then Deploy — in that order.** Not optional, and not one step; see traps #13
+   and #15. Infra puts the keys on the Lambda; Deploy bakes the button into the HTML.
 5. **Do not deploy `CustomerPortal`** — the adaptor's portal handler does not authenticate callers
    and there are no user accounts here.
 
@@ -125,8 +160,9 @@ The code is in place and dormant. To switch it on:
   redirect. A plain `<a href="/checkout">` straight at it would land the buyer on raw JSON. Our
   route unwraps it and issues the 303 itself, which is what preserves the plain-link design.
 - **`checkoutHrefFor()` runs at build time** (trap #13), so the *build* needs the key and the mode.
-  `deploy.yml` passes them to the build step; without that the buy button is absent from the
-  deployed HTML however correctly Terraform sets the Lambda's environment.
+  `deploy.yml` passes them to its build step; without that the buy button is absent from the
+  deployed HTML however correctly Terraform sets the Lambda's environment. Since the workflow split
+  that means the Dodo config is read by **both** workflows, for different reasons — trap #15.
 - **Two packages, not one.** `@dodopayments/nextjs` depends on `@dodopayments/core`, not on
   `dodopayments`; the REST SDK used by `fetchPayment()` is a separate explicit dependency.
 - **The payload shape no longer needs guessing.** The adaptor Zod-validates before our handlers
@@ -224,8 +260,8 @@ Everything below was verified over HTTP, not visually:
 
 13. **`checkoutHrefFor()` runs at BUILD time, not per request.** The detail pages are prerendered via
     `generateStaticParams`, so whether the buy button exists is baked into the HTML. Consequences:
-    the *build* needs `DODO_PAYMENTS_API_KEY` and `DODO_PAYMENTS_ENVIRONMENT` (deploy.yml passes
-    both to the build step), the mode chosen at build decides whether test or live product ids get
+    the *build* needs `DODO_PAYMENTS_API_KEY` and `DODO_PAYMENTS_ENVIRONMENT` (`deploy.yml` passes
+    both to its build step), the mode chosen at build decides whether test or live product ids get
     baked, and **turning payments on or off requires a redeploy** — changing the Lambda's
     environment alone does nothing to the button. The `/checkout` route and the webhook *are*
     per-request, so they pick up env changes immediately; only the button is baked.
@@ -233,6 +269,22 @@ Everything below was verified over HTTP, not visually:
 14. **Subscribe the webhook to only the three events we handle.** The adaptor validates against a
     closed schema and answers 400 for an unrecognised event type, so a "send me everything"
     subscription produces a stream of 400s and Dodo retries on them.
+
+15. **The Dodo config lives in BOTH workflows, and they are not interchangeable.**
+    `infra.yml` carries `TF_VAR_dodo_api_key` / `_webhook_key` / `_environment` in **both** its
+    `plan` and `apply` env blocks — a plan that cannot see them is not the apply you get — and that
+    is what puts `DODO_PAYMENTS_*` on the server Lambda. `deploy.yml` carries
+    `DODO_PAYMENTS_API_KEY` and `DODO_PAYMENTS_ENVIRONMENT` on its build step only, for trap #13.
+    Consequences: **going live is two ordered runs, Infra apply then Deploy**; applying infra alone
+    gives a configured Lambda with no buy button, and deploying alone gives a button whose
+    `/checkout` answers from an unkeyed function. Both workflows refuse a `live_mode` run with an
+    empty key rather than half-configuring production.
+
+16. **The canonical host is `www`.** `infra/variables.tf` sets `canonical_host = "www"`, so
+    `local.site_url` → `NEXT_PUBLIC_SITE_URL` → `SITE.url` → `dodoReturnUrl()` all resolve to
+    `https://www.dolessstudios.com`. Register the webhook and open any test checkout on `www.`. The
+    apex is a distribution alias with no redirect between the two, so it works either way, but the
+    return URL Dodo is handed will be `www` and matching them avoids a needless surprise.
 
 
 ---
@@ -271,6 +323,20 @@ npm run typecheck
 env -u DATABASE_URL -u SMTP_HOST -u SMTP_USER -u SMTP_PASS npm run build   # what CI does
 npm run db:studio                                                          # read leads
 ```
+
+Clear `.next` before `npm run typecheck` if the route structure changed — a stale
+`.next/types/validator.ts` reports modules at their old paths (trap #8). CI never sees this; it
+typechecks a fresh checkout.
+
+Against production, the webhook doubles as a free routing check — no Dodo account, no keys needed:
+
+```sh
+curl -i -X POST https://www.dolessstudios.com/api/webhook/dodo-payments -d '{}'
+```
+
+**503** while `DODO_PAYMENTS_WEBHOOK_KEY` is unset, **401** once it is set. Either proves CloudFront
+routes a POST to the server Lambda and the handler ran. HTML, a 403 or a CloudFront error page means
+the routing assumption is wrong. A 503 *after* an Infra apply means the apply did not take.
 
 Leads from the catalog:
 
@@ -321,7 +387,7 @@ automated safety net.
 ## 7. File map
 
 ```
-src/lib/content.ts                      SOLUTIONS, ADD_ONS, NAV, SOLUTION_STEPS/FAQ — the data model
+src/lib/content.ts                      SOLUTIONS, ADD_ONS, NAV, SOLUTION_STEPS/FAQ, LEGAL — the data model
 src/lib/money.ts                        USD minor units, the one formatter, display-only LKR rate
 src/lib/solutions.ts                    checkoutHrefFor() — the capability flag (runs at BUILD time)
 src/lib/dodo.ts                         Dodo config, all read inside functions; fetchPayment()
@@ -336,6 +402,8 @@ src/app/(site)/checkout/route.ts        static GET -> unwraps the adaptor's JSON
 src/app/(site)/api/webhook/dodo-payments/route.ts   signature verify -> orders.ts
 src/app/(demos)/                        demo root layout; demo/<slug>/ per vertical
 src/app/demo.css                        demos' theme + per-demo palettes (data-demo="<slug>")
+src/app/(site)/{terms,privacy,refund-policy}/       the three documents live mode requires
+src/components/sections/LegalDoc.tsx    one renderer for all three; they can't drift in layout
 
 src/components/solutions/               SolutionGrid, SolutionConfigurator, SolutionQuoteForm,
                                         SolutionDemo, DemoFrame, SolutionArt
@@ -344,7 +412,9 @@ src/components/ui/form.tsx              Chip/Err/field, shared with BriefForm
 
 drizzle/0001_off_the_shelf.sql          inquiries.solution (nullable) + inquiries.addons (not null)
 drizzle/0002_orders.sql                 orders table; payment_id UNIQUE is the idempotency key
-infra/cdn.tf, infra/lambda.tf           routing (already fine) and server_env (needs Dodo vars)
+infra/cdn.tf, infra/lambda.tf           routing (already fine) and server_env (carries DODO_PAYMENTS_*)
+.github/workflows/infra.yml             TF_VAR_dodo_* in BOTH plan and apply -> the Lambda's env
+.github/workflows/deploy.yml            DODO_PAYMENTS_* on the build step only -> the buy button
 ```
 
 Also read the **Off the shelf** and **Demos** sections of `README.md`, which document the architecture
