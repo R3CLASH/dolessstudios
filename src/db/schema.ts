@@ -20,6 +20,8 @@ export const inquiries = pgTable(
     /** Off-the-shelf leads only: the AddOn ids they picked. */
     addons: text("addons").array().notNull().default([]),
     status: inquiryStatus("status").notNull().default("new"),
+    /** Internal only, written from /admin. Never rendered on a public page. */
+    notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("inquiries_created_at_idx").on(t.createdAt), index("inquiries_status_idx").on(t.status)],
@@ -35,8 +37,11 @@ export const subscribers = pgTable("subscribers", {
 export const orderStatus = pgEnum("order_status", ["paid", "building", "delivered", "refunded", "cancelled"]);
 
 /**
- * One row per paid off-the-shelf site. There is no admin UI: this table plus the
- * studio notification email is the build queue (see README).
+ * One row per paid off-the-shelf site. This table is the build queue, read and
+ * advanced through /admin (src/app/(admin)/) and still announced by the studio
+ * notification email — see README. Before /admin existed, `npm run db:studio`
+ * was the only way to move a row, which is why `building` and `delivered` sat
+ * in the enum below with nothing ever setting them.
  *
  * The money columns record what Dodo actually charged, never what content.ts says
  * the price is. If a price is edited later, old orders keep telling the truth, and
@@ -75,6 +80,11 @@ export const orders = pgTable(
     status: orderStatus("status").notNull().default("paid"),
     /** Set once both order emails have been attempted, so a failure is visible in SQL. */
     emailed: boolean("emailed").notNull().default(false),
+    /**
+     * The studio's own scratchpad for this build, written from /admin. Internal:
+     * the buyer's /orders/[ref] page must never render it.
+     */
+    notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

@@ -72,6 +72,24 @@ variable "database_url" {
   sensitive   = true
 }
 
+# /admin (src/app/(admin)/) and the signed buyer order links. Both are request-time
+# only — unlike DODO_PAYMENTS_* (trap #13) neither is read at build, so they belong
+# on the Lambda and nowhere in deploy.yml.
+
+variable "admin_password" {
+  description = "Optional shared password for /admin. Empty makes every admin route 404, including the login form. Generate with: openssl rand -base64 24"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "order_link_secret" {
+  description = "Optional. Signs the /orders/<ref> links in order confirmation emails. Empty omits the link from the email and 404s the page. Generate with: openssl rand -base64 32"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "dodo_api_key" {
   description = "Optional Dodo Payments API key. Empty hides the buy buttons and routes every CTA to the quote form."
   type        = string

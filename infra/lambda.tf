@@ -29,6 +29,13 @@ locals {
       SMTP_PASS          = var.smtp_pass
       CONTACT_FROM_EMAIL = var.contact_from_email
       DATABASE_URL       = var.database_url
+      # /admin's whole auth. Absent means the admin area 404s, which is the
+      # same thing it does locally with the variable unset.
+      ADMIN_PASSWORD = var.admin_password
+      # Signs the order links in confirmation emails. Was missing here while it
+      # sat in .env.example, so production shipped every confirmation email
+      # without the buyer's order link.
+      ORDER_LINK_SECRET = var.order_link_secret
       # No DODO_PAYMENTS_RETURN_URL here. Building it from local.site_url creates a
       # Terraform cycle (distribution -> apigw -> integration -> lambda env ->
       # distribution); the app derives it from SITE.url instead.

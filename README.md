@@ -39,13 +39,18 @@ src/
   lib/dodo.ts             Dodo config, the brand theme sent to checkout, createCheckoutSession()
   lib/orders.ts           webhook -> orders row, idempotent on payment_id, never throws
   lib/orderRef.ts         the "DLS-…" reference (derived from payment_id) + signed /orders links
-  lib/ratelimit.ts        per-IP in-memory limiter, shared by the server actions and /api routes
+  lib/ratelimit.ts        per-IP in-memory limiter: server actions, /api routes, the /admin login
+  lib/adminSession.ts     /admin auth: password check, signed cookie, requireAdmin() (the DAL)
+  lib/adminData.ts        /admin reads: orders, off-the-shelf leads, counts. Never throws.
   db/                     Drizzle schema + lazy connection
   components/
     shell/                header + to-do menu, command palette, page transition, cursor, preloader, footer, Lenis
     home/                 homepage sections (Hero is the scroll story)
     services/ work/ about/ contact/ sections/ ui/
   app/fonts/              self-hosted Bricolage Grotesque (variable) + JetBrains Mono
+  app/(admin)/            THIRD root layout: /admin, /admin/orders[/ref], /admin/leads, /admin/login
+  app/(admin)/admin/actions.ts   "use server": login, logout, status and note writes
+  components/admin/       AdminShell, StatusPill, NoDatabase
 drizzle/                  SQL migrations
 ```
 
@@ -76,10 +81,16 @@ Things that look like choices but aren't:
   own row, then commit to nothing), and the webhook is the real record.
 - **The order reference is derived from the payment id,** not random — see `lib/orderRef.ts`. That
   is what lets the thanks page print it before the webhook has landed.
-- **`/orders/[ref]` is gated by an HMAC in the link,** not by a login. There are no user accounts;
-  `CustomerPortal` from the Dodo adaptor must not be deployed, because it doesn't authenticate.
-- **Order status is advanced by hand** in `npm run db:studio`. The `orders` table is the build
-  queue; there is deliberately no admin UI.
+- **`/orders/[ref]` is gated by an HMAC in the link,** not by a login. There are no *buyer*
+  accounts; `CustomerPortal` from the Dodo adaptor must not be deployed, because it doesn't
+  authenticate. The studio side is a separate and unrelated mechanism — see `/admin` below.
+- **Order status is advanced at `/admin`.** The `orders` table is still the build queue, but it is
+  now read and moved through the dashboard rather than `npm run db:studio`.
+- **The webhook owns `refunded`; `/admin` owns `building`, `delivered` and `cancelled`.** The
+  dashboard cannot set `refunded` — that comes from Dodo's `refund.succeeded` webhook via
+  `markOrderRefunded()`, and a human setting it by hand would put our row at odds with the payment
+  processor while looking exactly like a real refund. `/admin` also refuses to move a row that is
+  already refunded.
 
 `/checkout` (the older static-link route) still exists as the hosted fallback and is the route the
 Sri Lanka payout test runs through. See `HANDOFF.md`.
@@ -160,6 +171,13 @@ One-time setup:
      product id **fails the build** rather than quietly routing that one page to the quote form while
      the rest take cards — `assertLiveCatalogSellable()` in `src/lib/solutions.ts`. Test mode only
      warns. See HANDOFF §3.2 for the per-product price table.
+   - optional, for the internal dashboard: secret `ADMIN_PASSWORD` (generate it —
+     `openssl rand -base64 24`). Without it `/admin` 404s on production, login form included, which
+     is a safe and coherent state, so the run only warns. Also secret `ORDER_LINK_SECRET`
+     (`openssl rand -base64 32`); without it order confirmation emails omit the buyer's order link
+     and `/orders/<ref>` 404s. Unlike the Dodo keys, **both of these are read by Infra only** — they
+     are request-time values on the Lambda and are never baked into the build, so setting them takes
+     effect on an Infra apply with no redeploy needed.
 3. Run **Infra** → *Run workflow* on `main`. Read the plan in the run summary; the apply follows it.
 4. Push to `main` (or run **Deploy** by hand) to put the real code on the Lambdas. The run summary shows the site URL.
 
@@ -205,7 +223,38 @@ Local plan — no build needed, nothing in `infra/` reads the build output any m
 (with `TF_VAR_smtp_user` / `TF_VAR_smtp_pass` set). Builds pick up a local `.env`, so deploy from CI rather than
 from a machine that has one.
 
-The rate limiter in `lib/actions.ts` is in-memory per Lambda instance; swap for Upstash or similar if you need it to be
-global.
+The rate limiter lives in `lib/ratelimit.ts` (not `lib/actions.ts`) and is in-memory per Lambda
+instance; swap for Upstash or similar if you need it to be global. It now also fronts the `/admin`
+login, where it blunts a script but is explicitly **not** the defence — see below.
 
-New briefs land in the `inquiries` table with `status = 'new'`. There's no admin UI yet; Drizzle Studio works for now.
+New briefs land in the `inquiries` table with `status = 'new'`. Off-the-shelf quote requests
+(`source like 'off-the-shelf:%'`) are triaged at `/admin/leads`; bespoke contact briefs are not in
+that view, so Drizzle Studio is still the tool for those.
+
+## The admin dashboard
+
+`/admin` is an internal, password-gated dashboard over both halves of the off-the-shelf funnel:
+paid orders and quote leads. It is **not** part of the marketing site — it is a third root layout
+(`src/app/(admin)/`), alongside `(site)` and `(demos)`, so it inherits none of the smooth scroll,
+page transitions, header, footer or command palette.
+
+| | |
+|---|---|
+| Auth | One shared `ADMIN_PASSWORD`. No user table, no accounts, no new dependencies. |
+| Session | An HMAC-signed, httpOnly cookie scoped to `Path=/admin`, 7 days. The signing key is *derived* from the password, so changing the password signs every browser out — that is the only global revocation lever. |
+| Unset password | **The whole area 404s, login form included.** Absent reads as absent, exactly like `ORDER_LINK_SECRET`. |
+| Authorization | `requireAdmin()` from `lib/adminSession.ts`, called at the top of every page and inside every mutation. There is deliberately **no** `proxy.ts`. |
+| Writes | Order status (`paid`/`building`/`delivered`/`cancelled`), lead status, and an internal `notes` column on both tables. Notes are never rendered on a buyer-facing page. |
+
+**Nothing links to `/admin`.** It is not in `NAV`, the footer, the command palette, the sitemap or
+`robots.txt` — the URL is typed or bookmarked. Adding it to `NAV` would put it in the header, the
+full-screen menu, the footer, ⌘K, `PageTransition`'s `labelFor()` *and* the sitemap in one edit;
+don't.
+
+**Why `/admin` must never be cached:** `infra/cdn.tf`'s server cache policy sets
+`cookie_behavior = "none"`, so the session cookie is not part of the CloudFront cache key, while
+cookies are still forwarded to the origin and GET is in `cached_methods`. A cacheable admin
+response would be stored at the edge and served to the next anonymous visitor. Three layers stop
+that: `Cache-Control: no-store` from `next.config.ts`'s `headers()` (declared once so a new admin
+page cannot forget it), `force-dynamic` on every admin route, and a dedicated `/admin*` behavior in
+`infra/cdn.tf` on the managed `CachingDisabled` policy. Don't remove any of them.

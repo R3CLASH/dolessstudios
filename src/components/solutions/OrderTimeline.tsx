@@ -3,11 +3,15 @@ import type { Order } from "@/db/schema";
 /**
  * Where a build has got to: paid → building → delivered.
  *
- * Reads the order_status enum that already exists — the studio advances it by
- * hand in `npm run db:studio`, because the orders table *is* the build queue and
- * there is deliberately no admin UI. Refunded and cancelled are terminal and get
- * their own line rather than a position on the track, because they aren't
- * progress.
+ * Reads the order_status enum that already exists. The studio advances it from
+ * /admin (setOrderStatus), which is also what gives this component something to
+ * show: before that dashboard existed, `building` and `delivered` sat in the
+ * enum with nothing ever setting them.
+ *
+ * Refunded and cancelled are terminal and get their own line rather than a
+ * position on the track, because they aren't progress. `refunded` in particular
+ * is never set by a human — it comes from Dodo's refund.succeeded webhook via
+ * markOrderRefunded(), and /admin deliberately cannot set it.
  */
 
 const STEPS = [

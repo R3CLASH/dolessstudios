@@ -63,6 +63,12 @@ jobs:
       TF_VAR_dodo_webhook_key: ${{ secrets.DODO_WEBHOOK_KEY }}
       TF_VAR_dodo_environment: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
       TF_VAR_dodo_test_product_id: ${{ vars.DODO_TEST_PRODUCT_ID }}
+      # Request-time only, unlike the Dodo keys (trap #13): these are read per
+      # request by the Lambda, never baked into the build, so they live here and
+      # NOT on deploy.yml's build step. Still needed in BOTH env blocks below,
+      # per trap #15 — a plan that cannot see them is not the apply you get.
+      TF_VAR_admin_password: ${{ secrets.ADMIN_PASSWORD }}
+      TF_VAR_order_link_secret: ${{ secrets.ORDER_LINK_SECRET }}
     steps:
       # The deploy role trusts refs/heads/main and the production environment, nothing else. This job
       # has no environment, so off main it dies inside the AWS login with an opaque STS error instead.
@@ -86,6 +92,15 @@ jobs:
           fi
           if [ -z "$TF_VAR_dodo_api_key" ] || [ -z "$TF_VAR_dodo_webhook_key" ]; then
             echo "::warning::DODO_API_KEY or DODO_WEBHOOK_KEY isn't set, so the buy buttons stay hidden and every CTA routes to the quote form."
+          fi
+          # Warnings, never errors: unlike live_mode with no Dodo key, an absent
+          # admin password or order-link secret is a safe, coherent state — the
+          # feature is simply off.
+          if [ -z "$TF_VAR_admin_password" ]; then
+            echo "::warning::ADMIN_PASSWORD isn't set, so /admin will 404 on production (login form included)."
+          fi
+          if [ -z "$TF_VAR_order_link_secret" ]; then
+            echo "::warning::ORDER_LINK_SECRET isn't set, so order confirmation emails omit the buyer's order link and /orders/<ref> 404s."
           fi
           # Refused rather than warned: a live_mode function with no key would take a card click and
           # answer 503, and the webhook would drop real events instead of making Dodo retry.
@@ -147,6 +162,12 @@ jobs:
       TF_VAR_dodo_webhook_key: ${{ secrets.DODO_WEBHOOK_KEY }}
       TF_VAR_dodo_environment: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
       TF_VAR_dodo_test_product_id: ${{ vars.DODO_TEST_PRODUCT_ID }}
+      # Request-time only, unlike the Dodo keys (trap #13): these are read per
+      # request by the Lambda, never baked into the build, so they live here and
+      # NOT on deploy.yml's build step. Still needed in BOTH env blocks below,
+      # per trap #15 — a plan that cannot see them is not the apply you get.
+      TF_VAR_admin_password: ${{ secrets.ADMIN_PASSWORD }}
+      TF_VAR_order_link_secret: ${{ secrets.ORDER_LINK_SECRET }}
     steps:
       - uses: actions/checkout@v4
 

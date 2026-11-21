@@ -262,6 +262,11 @@ came back to a thanks page with no number on it.
   not a bearer token, so the page `notFound()`s without a valid signature rather than 401-ing
   (which would confirm the reference exists). Unset secret = link omitted from the email and the
   page 404s; nothing throws.
+
+  **This was dormant in production until the admin work.** `ORDER_LINK_SECRET` was documented in
+  `.env.example` but was never added to `infra/lambda.tf` or `infra.yml`, so every confirmation
+  email production sent would have omitted the link. It is now plumbed through both (trap #18), and
+  needs the `ORDER_LINK_SECRET` secret on the GitHub `production` environment plus one Infra apply.
 - **The summary agrees with the frame.** Dodo adds tax at checkout that our price pages never
   mentioned — the thing that made a Rs 89,990 site arrive as £248.14. `CheckoutPanel` listens for
   `checkout.breakdown` and shows Dodo's subtotal/tax/total once they arrive.
@@ -287,6 +292,50 @@ Traps found while building it:
   is still the redirect to `return_url`; `/thanks` is still the thing that verifies.
 - **The buyer's email must come from Dodo or our row**, never the `email=` query param Dodo appends
   to the return URL — same reasoning as `status`, which has always been declared and never read.
+
+### 3.3c BUILT — the internal admin dashboard (`/admin`)
+
+Built because the `orders` table plus a notification email *was* the build queue, which stops
+working the moment two people need the same view of it: `npm run db:studio` wants the production
+`DATABASE_URL` on a laptop, shows raw enum values and LKR minor units, and gives a colleague no way
+to see what has been dealt with. `order_status` also had `building` and `delivered` with **nothing
+in the codebase ever setting them** — states no one could reach.
+
+- **`src/app/(admin)/` is a third root layout**, alongside `(site)` and `(demos)`. Not a subtree of
+  `(site)`, and the reason is trap #1: `PageTransition` intercepts every same-origin `<a>` click, so
+  a dashboard inside it would need `data-no-transition` on everything. Outside it the problem does
+  not exist. It also sheds Lenis, GSAP, the header, footer, ⌘K and the custom cursor, which are all
+  wrong furniture for a dense table.
+- **Auth is one shared `ADMIN_PASSWORD`** and an HMAC-signed httpOnly cookie, `Path=/admin`, 7 days.
+  The signing key is *derived* from the password (`createHmac(password).update("v1")`), so one env
+  var is the whole setup and **changing the password signs every browser out** — the only global
+  revocation lever, since there is no session table. The expiry is signed and enforced from the
+  payload, never from the cookie's `Max-Age`.
+- **Unset `ADMIN_PASSWORD` 404s the whole area, login form included.** Same posture as
+  `ORDER_LINK_SECRET`. It also makes the rollout self-verifying: `/admin` answering **404** before
+  the Infra apply and **307 → /admin/login** after it proves the apply put the variable on the
+  Lambda, the same trick the webhook's 503→401 flip gives.
+- **Authorization is in the Data Access Layer, not a proxy.** `requireAdmin()` from
+  `lib/adminSession.ts` is called at the top of every page and inside every mutation. There is
+  deliberately **no `proxy.ts`**: the Next docs say Proxy must not be the only authorization layer,
+  and with five routes an explicit call is easier to audit than a matcher.
+- **No mutation calls `revalidatePath`** (trap #5). Each ends in `redirect()` back to the page it
+  changed; the pages are `force-dynamic` and `no-store`, so that redirect re-reads Postgres. There
+  is no cache to invalidate in the first place.
+- **Nothing links to `/admin`** — not `NAV`, the footer, ⌘K, the sitemap or `robots.txt`. Adding it
+  to `NAV` would put it in six places at once, including the sitemap. The URL is typed.
+  `robots.txt` is deliberately left alone too: nothing links to the path, so listing it in a public
+  file is the only way a crawler would learn it exists. The `X-Robots-Tag: noindex` header plus the
+  per-page `robots` metadata is the real protection.
+
+Measured locally against Postgres: all five routes 404 with no `ADMIN_PASSWORD`; 307 → login once
+set; a **correctly signed but expired** cookie rejected (proving the signed-payload expiry), as are
+a forged signature, a cookie signed with a different password, and malformed values — all 307, none
+500; login sets `Path=/admin; HttpOnly; SameSite=lax`, wrong password sets no cookie; the rate limit
+closes after 5 attempts per IP; `status=refunded` forged into a direct POST **rejected** by the
+narrowed enum; moving an already-refunded row **refused**; an unauthenticated POST redirected with
+**no write**; and advancing an order to `building` from `/admin` showed up as the current step on the
+buyer's own `/orders/[ref]?t=…` page, with the internal note **not** present in that HTML.
 
 ### 3.4 Phase 4 — polish
 
@@ -391,7 +440,31 @@ Everything below was verified over HTTP, not visually:
     `/checkout` answers from an unkeyed function. Both workflows refuse a `live_mode` run with an
     empty key rather than half-configuring production.
 
-16. **The canonical host is `www`.** `infra/variables.tf` sets `canonical_host = "www"`, so
+16. **A `"use server"` file may only EXPORT async functions.** Exporting anything else from one —
+    a const, an array, a type's runtime value — fails at *runtime* with
+    `A "use server" file can only export async functions, found object`, and **`npm run typecheck`
+    does not catch it.** It cost real time: the symptom was every `/admin` route answering 500
+    while `/admin` itself correctly 404'd, which reads like a routing problem rather than a module
+    one. `ADMIN_SETTABLE_STATUSES` lives in `lib/adminData.ts` for exactly this reason. Shared
+    constants go in a plain module and are imported by the actions file.
+
+17. **CloudFront's server cache policy excludes cookies from the cache key while still caching
+    GET.** `aws_cloudfront_cache_policy.server` in `infra/cdn.tf` sets `cookie_behavior = "none"`;
+    cookies *are* forwarded to the origin (`Managed-AllViewerExceptHostHeader`) and `GET` *is* in
+    `cached_methods`. So any cacheable authenticated response is a data leak: CloudFront stores it
+    keyed on path+query alone and serves it to the next visitor with no cookie. `/admin` is
+    defended three times over — `no-store` from `next.config.ts`'s `headers()`, `force-dynamic` on
+    every route, and a `/admin*` behavior on the managed `CachingDisabled` policy. **Never remove
+    any of the three**, and never add a cookie-authenticated page outside `/admin` without
+    repeating all three.
+
+18. **`ADMIN_PASSWORD` and `ORDER_LINK_SECRET` are request-time only**, so unlike `DODO_PAYMENTS_*`
+    (trap #13) they belong in `infra.yml` and **not** on `deploy.yml`'s build step. Consequence,
+    and it is the good kind: switching the admin dashboard on or off is an **Infra apply with no
+    redeploy**, and trap #15's ordering does not apply to them. Rollback is to unset the secret and
+    re-apply — the area 404s again with no code change.
+
+19. **The canonical host is `www`.** `infra/variables.tf` sets `canonical_host = "www"`, so
     `local.site_url` → `NEXT_PUBLIC_SITE_URL` → `SITE.url` → `dodoReturnUrl()` all resolve to
     `https://www.dolessstudios.com`. Register the webhook and open any test checkout on `www.`. The
     apex is a distribution alias with no redirect between the two, so it works either way, but the
@@ -407,6 +480,14 @@ Everything below was verified over HTTP, not visually:
 - **Never re-state `priceCents` after payment.** The thanks page and both order emails must show the
   amount Dodo actually charged. This makes price drift a marketing bug, not a billing dispute.
 - **Add-ons never touch checkout.** They route to a quote, so their prices carry no payment risk.
+- **The webhook owns `refunded`; `/admin` owns `building`, `delivered` and `cancelled`.** The
+  dashboard's status enum (`ADMIN_SETTABLE_STATUSES` in `lib/adminData.ts`) excludes `refunded`,
+  the server action validates against that narrowed enum rather than the column's, and a row that
+  is already refunded refuses any status write. A hand-set `refunded` would look exactly like a
+  real one while disagreeing with Dodo — which is the single thing the money columns exist to
+  prevent.
+- **`orders.notes` and `inquiries.notes` are internal.** No buyer-facing page may render them,
+  including `/orders/[ref]`, where the row is already in scope.
 - **Everything tolerates `getDb()` returning `null`** and SMTP being unset. "The email reaching us or the
   row landing counts as received" is the existing pattern; follow it.
 - **No demo form sends data anywhere**, and each says so in its confirmation. Don't wire them up.
@@ -490,6 +571,55 @@ curl -i -X POST https://<site>/api/webhook/dodo-payments -d '{}'
 A **401** proves CloudFront routed a POST to the server Lambda and the signature verifier ran. HTML, a
 403 or a CloudFront error page means the routing assumption is wrong.
 
+### Verifying /admin
+
+The admin area is checkable almost entirely over HTTP, because the session cookie can be minted
+with the same derivation the app uses:
+
+```sh
+# 1. the unconfigured state — every route must 404, login form included
+env -u ADMIN_PASSWORD npm run dev
+curl -s -o /dev/null -w '%{http_code}\n' localhost:3001/admin/login    # 404
+
+# 2. configured: /admin and /admin/orders 307 to the login form
+ADMIN_PASSWORD=... ORDER_LINK_SECRET=... npm run dev
+
+# 3. mint a session cookie (expiry is signed, so forge attempts need the password)
+node -e 'const{createHmac}=require("node:crypto");const k=createHmac("sha256",process.env.ADMIN_PASSWORD).update("v1").digest();const p="v1."+(Date.now()+36e5);console.log(p+"."+createHmac("sha256",k).update(p).digest("base64url").slice(0,32))'
+```
+
+Then confirm, with that cookie: `/admin/orders` 200s; and **without** it, or with a correctly
+signed but **expired** payload, a forged signature, a cookie signed with a different password, or
+any malformed value, every route 307s to the login form and never 500s.
+
+Headers on every admin response — the trap #17 defence — must read:
+
+```sh
+curl -sI localhost:3001/admin/orders | grep -iE 'cache-control|x-robots-tag|content-security'
+# Cache-Control: no-store ; X-Robots-Tag: noindex, nofollow ; CSP: frame-ancestors 'none'
+```
+
+and a public page must have **none** of them, or the demo embeds are at risk (trap #11).
+
+Driving the mutations by curl needs the action id, which is in the rendered HTML of the no-JS form
+(`grep -oE '\$ACTION_ID_[a-f0-9]+'`); the forms are `multipart/form-data`, so post with
+`--form-string`. The four worth re-running after any change to the actions: forging
+`status=refunded` (must redirect `?e=bad`, row unchanged), moving an already-refunded row (must
+redirect `?e=refunded`), an unauthenticated POST (must redirect to login with **no** write), and a
+status change showing up on the buyer's `/orders/[ref]?t=…` page.
+
+**The one check that cannot be done locally** is trap #17 itself. After Infra apply and Deploy: sign
+in, load `/admin/leads` so a response for that exact path reaches the edge, then immediately, from a
+machine with no cookie, `curl -s https://www.dolessstudios.com/admin/leads`. It must be the login
+redirect — never a lead's name or email. Repeat `curl -sI` three times and confirm `x-cache` never
+reports a Hit.
+
+```sql
+-- the build queue, as /admin reads it
+select created_at, reference, solution, name, email, amount_cents, currency, status, emailed, notes
+from orders order by created_at desc;
+```
+
 There is **no test framework and no linter** in this project. `typecheck` + `build` are the whole
 automated safety net.
 
@@ -504,7 +634,9 @@ src/lib/solutions.ts                    checkoutHrefFor() — the capability fla
 src/lib/dodo.ts                         Dodo config, all read inside functions; fetchPayment()
 src/lib/orders.ts                       webhook -> orders row, the idempotency gate, never throws
 src/lib/orderRef.ts                     DLS-… reference derived from payment_id; signs /orders links
-src/lib/ratelimit.ts                    per-IP limiter, shared by actions.ts and /api/checkout/session
+src/lib/ratelimit.ts                    per-IP limiter: actions.ts, /api/checkout/session, /admin login
+src/lib/adminSession.ts                 /admin auth: password check, signed cookie, requireAdmin() (the DAL)
+src/lib/adminData.ts                    /admin reads + ADMIN_SETTABLE_STATUSES; never throws
 src/lib/solutionInquiry.ts              quote schema, built from inquirySchema
 src/lib/actions.ts                      submitSolutionInquiry + the honeypot/rate-limit/clientIp helpers
 src/lib/mail.ts                         rowsTable(), sendSolutionInquiryEmail — order emails go here
@@ -517,6 +649,10 @@ src/app/(site)/api/checkout/session/    POST -> themed Dodo session (force-dynam
 src/app/(site)/checkout/route.ts        static GET -> unwraps the adaptor's JSON -> 303 to Dodo
                                         (kept: hosted fallback + the payout-test hatch)
 src/app/(site)/api/webhook/dodo-payments/route.ts   signature verify -> orders.ts
+src/app/(admin)/                        THIRD root layout — no PageTransition, Lenis, header or ⌘K
+src/app/(admin)/admin/                  orders, orders/[ref], leads, login (all force-dynamic)
+src/app/(admin)/admin/actions.ts        "use server": login, logout, status and note writes
+src/components/admin/AdminShell.tsx     admin chrome, StatusPill, NoDatabase
 src/app/(demos)/                        demo root layout; demo/<slug>/ per vertical
 src/app/demo.css                        demos' theme + per-demo palettes (data-demo="<slug>")
 src/app/(site)/{terms,privacy,refund-policy}/       the three documents live mode requires
@@ -530,6 +666,7 @@ src/components/ui/form.tsx              Chip/Err/field, shared with BriefForm
 
 drizzle/0001_off_the_shelf.sql          inquiries.solution (nullable) + inquiries.addons (not null)
 drizzle/0002_orders.sql                 orders table; payment_id UNIQUE is the idempotency key
+drizzle/0004_oval_zarda.sql             notes on orders and inquiries (internal, /admin only)
 infra/cdn.tf, infra/lambda.tf           routing (already fine) and server_env (carries DODO_PAYMENTS_*)
 .github/workflows/infra.yml             TF_VAR_dodo_* in BOTH plan and apply -> the Lambda's env
 .github/workflows/deploy.yml            DODO_PAYMENTS_* on the build step only -> the buy button

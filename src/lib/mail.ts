@@ -185,8 +185,11 @@ function orderRows(o: OrderEmail): [string, string][] {
 }
 
 /**
- * Tells the studio a site has been paid for. This inbox is the build queue —
- * there's no admin UI — so the next steps are in the body.
+ * Tells the studio a site has been paid for. The next steps are in the body
+ * because this inbox is still a build queue in its own right — /admin is now the
+ * other one, and the email is what makes a sale arrive rather than wait to be
+ * noticed. It is also the only trace on the `unrecorded` path below, where there
+ * is no row for /admin to show.
  *
  * `unrecorded` is the bad day: the payment is real and verified but the row
  * didn't land, so the email is the only trace. It still returns normally,
