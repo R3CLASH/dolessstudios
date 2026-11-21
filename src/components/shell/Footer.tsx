@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
-import { NAV, SERVICES, SITE, SOLUTIONS } from "@/lib/content";
+import { LEGAL, NAV, SERVICES, SITE, SOLUTIONS } from "@/lib/content";
 import { subscribe, type FormState } from "@/lib/actions";
 import { Mark } from "@/components/brand/Mark";
 import { scrollToTop } from "./SmoothScroll";
@@ -127,6 +127,17 @@ export function Footer() {
 
       <div className="wrap mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-line py-6 font-mono text-xs text-mist">
         <span>© {new Date().getFullYear()} {SITE.name}</span>
+        {/* Not in NAV: NAV drives the header pill nav and ⌘K, where a fourth item
+            already collides with the logo between 1024 and 1200px. */}
+        <ul className="flex flex-wrap items-center gap-4">
+          {LEGAL.map((l) => (
+            <li key={l.slug}>
+              <Link href={`/${l.slug}`} className="hover:text-paper">
+                {l.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
         {SITE.email && (
           <a href={`mailto:${SITE.email}`} className="hover:text-paper">
             {SITE.email}

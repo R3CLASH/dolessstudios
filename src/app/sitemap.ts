@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { NAV, PROJECTS, SERVICES, SITE, SOLUTIONS } from "@/lib/content";
+import { LEGAL, NAV, PROJECTS, SERVICES, SITE, SOLUTIONS } from "@/lib/content";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = SITE.url.replace(/\/$/, "");
@@ -10,5 +10,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...SOLUTIONS.map((s) => ({ url: `${base}/off-the-shelf/${s.slug}`, lastModified: now, priority: 0.8 })),
     ...SERVICES.map((s) => ({ url: `${base}/services/${s.slug}`, lastModified: now, priority: 0.7 })),
     ...PROJECTS.map((p) => ({ url: `${base}/work/${p.slug}`, lastModified: now, priority: 0.6 })),
+    ...LEGAL.map((l) => ({ url: `${base}/${l.slug}`, lastModified: now, priority: 0.3 })),
   ];
 }
