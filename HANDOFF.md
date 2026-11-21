@@ -37,7 +37,7 @@ Decisions already made (do not re-litigate — the user chose these):
 | Route | `/off-the-shelf`, `/off-the-shelf/[slug]` |
 | Verticals | trades · restaurant/salon · clinic · startup/SaaS |
 | Delivery | **done-for-you** — we deploy on their domain and hand over. Payment buys a build slot, not a download |
-| Prices | $249 / $249 / $349 / $199, USD, paid in full up front |
+| Prices | LKR 89,990 / 89,990 / 119,990 / 69,990, paid in full up front. The Dodo products are priced in RUPEES; the dollar figures on the site ($271 / $271 / $361 / $211) are derived from them at `LKR_PER_USD` and drift with the rate. See the header comment in `src/lib/money.ts`. |
 | Buy flow | **hybrid** — 0 add-ons → instant checkout; 1+ → quote form |
 | Payments | **Dodo Payments**, not Stripe |
 | Currency | USD base; LKR appears at checkout via Dodo Adaptive Currency |
@@ -198,7 +198,7 @@ The code is in place and dormant. To switch it on:
   answer before the first real sale, even if only in the handover email.
 - **`LKR_PER_USD` in `src/lib/money.ts` is a hardcoded 305**, display-only, last set 2026-11-15. Nothing
   charges at this rate, but it drifts. There is no reminder mechanism.
-- **Base price vs margin.** At $199–$349 a done-for-you build is close to break-even once branding and
+- **Base price vs margin.** At roughly $211–$361 a done-for-you build is close to break-even once branding and
   content are done; the add-ons carry the margin. The user chose this knowingly. Revisit after ~5 sales.
 
 ### 3.6 Needs a human with a browser
