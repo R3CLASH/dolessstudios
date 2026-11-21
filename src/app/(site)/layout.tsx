@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import "./globals.css";
+import "../globals.css";
 import { SITE } from "@/lib/content";
 import { SmoothScroll } from "@/components/shell/SmoothScroll";
 import { PageTransition } from "@/components/shell/PageTransition";
@@ -13,7 +13,7 @@ import { Preloader } from "@/components/shell/Preloader";
 // Fonts are self-hosted (no build-time request to Google Fonts).
 const bricolage = localFont({
   src: [
-    { path: "./fonts/bricolage-latin.woff2", weight: "200 800", style: "normal" },
+    { path: "../fonts/bricolage-latin.woff2", weight: "200 800", style: "normal" },
   ],
   variable: "--font-bricolage",
   display: "swap",
@@ -22,9 +22,9 @@ const bricolage = localFont({
 
 const mono = localFont({
   src: [
-    { path: "./fonts/jetbrains-400.woff2", weight: "400", style: "normal" },
-    { path: "./fonts/jetbrains-600.woff2", weight: "600", style: "normal" },
-    { path: "./fonts/jetbrains-700.woff2", weight: "700", style: "normal" },
+    { path: "../fonts/jetbrains-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/jetbrains-600.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/jetbrains-700.woff2", weight: "700", style: "normal" },
   ],
   variable: "--font-jetbrains",
   display: "swap",
@@ -55,7 +55,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${bricolage.variable} ${mono.variable}`}>
+    // suppressHydrationWarning covers only this element's own attributes:
+    // browser extensions inject things like data-ube-extension onto <html>
+    // before React hydrates. Mismatches deeper in the tree still warn.
+    <html lang="en" className={`${bricolage.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>
         <SmoothScroll>
           <PageTransition>

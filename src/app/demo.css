@@ -1,0 +1,216 @@
+/*
+ * Styles for the off-the-shelf demos only. Deliberately separate from
+ * globals.css: a demo is pretending to be someone else's website, so it must
+ * not inherit the Do Less Studios dark theme, cursor or motion.
+ *
+ * Colours come from per-demo custom properties, so each vertical gets its own
+ * palette without another stylesheet. Add a block under "Per-demo palettes"
+ * and set data-demo="<slug>" on the wrapper.
+ */
+@import "tailwindcss";
+
+@theme {
+  /* Utilities resolve to the active demo's variables (see below). */
+  --color-brand: var(--d-brand);
+  --color-brand-soft: var(--d-brand-soft);
+  --color-accent: var(--d-accent);
+  --color-surface: var(--d-surface);
+  --color-surface-2: var(--d-surface-2);
+  --color-ink: var(--d-ink);
+  --color-muted: var(--d-muted);
+  --color-edge: var(--d-edge);
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ------- Per-demo palettes ------- */
+:root,
+[data-demo="trades"] {
+  /* Electrician: utility navy + safety yellow. */
+  --d-brand: #0f2742;
+  --d-brand-soft: #e8eef5;
+  --d-accent: #ffc400;
+  --d-surface: #ffffff;
+  --d-surface-2: #f4f6f9;
+  --d-ink: #10151c;
+  --d-muted: #5b6676;
+  --d-edge: #dfe4ea;
+}
+
+[data-demo="restaurant"] {
+  /* Restaurant: warm charcoal on cream, terracotta accent. */
+  --d-brand: #2d2016;
+  --d-brand-soft: #f3e9dd;
+  --d-accent: #c9603f;
+  --d-surface: #fffcf7;
+  --d-surface-2: #f6efe5;
+  --d-ink: #241a12;
+  --d-muted: #7a6a5b;
+  --d-edge: #e5dacb;
+}
+
+[data-demo="clinic"] {
+  /* Clinic: calm teal, generous white, nothing shouting. */
+  --d-brand: #10494a;
+  --d-brand-soft: #e3f1f0;
+  --d-accent: #1f9d8f;
+  --d-surface: #ffffff;
+  --d-surface-2: #f2f7f7;
+  --d-ink: #10211f;
+  --d-muted: #5a6d6b;
+  --d-edge: #dde7e6;
+}
+
+[data-demo="startup"] {
+  /* SaaS: near-black with an electric indigo. */
+  --d-brand: #141327;
+  --d-brand-soft: #eceaff;
+  --d-accent: #5b4bf5;
+  --d-surface: #ffffff;
+  --d-surface-2: #f5f4fb;
+  --d-ink: #14131f;
+  --d-muted: #605c75;
+  --d-edge: #e3e1ee;
+}
+
+:root {
+  color-scheme: light;
+  --d-gutter: clamp(1rem, 4vw, 2.5rem);
+}
+
+html {
+  background: var(--d-surface);
+  color: var(--d-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  min-height: 100svh;
+}
+
+::selection {
+  background: var(--d-accent);
+  color: var(--d-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--d-accent);
+  outline-offset: 2px;
+}
+
+@layer components {
+  /* Page gutter, matching the site's own .wrap idea but light-themed. */
+  .d-wrap {
+    width: 100%;
+    max-width: 78rem;
+    margin-inline: auto;
+    padding-inline: var(--d-gutter);
+  }
+
+  .d-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding: 0 1.4rem;
+    border-radius: 999px;
+    font-weight: 650;
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 0.25s var(--ease-out), background-color 0.25s, color 0.25s;
+  }
+  .d-btn:active {
+    transform: translateY(1px);
+  }
+  .d-btn-primary {
+    background: var(--d-accent);
+    color: var(--d-ink);
+  }
+  .d-btn-primary:hover {
+    background: color-mix(in oklab, var(--d-accent) 86%, black);
+  }
+  .d-btn-dark {
+    background: var(--d-brand);
+    color: #fff;
+  }
+  .d-btn-dark:hover {
+    background: color-mix(in oklab, var(--d-brand) 86%, black);
+  }
+  .d-btn-ghost {
+    border: 1.5px solid var(--d-edge);
+    color: var(--d-ink);
+    background: var(--d-surface);
+  }
+  .d-btn-ghost:hover {
+    border-color: var(--d-brand);
+  }
+
+  .d-h1 {
+    font-family: var(--font-display);
+    font-weight: 750;
+    letter-spacing: -0.035em;
+    line-height: 0.98;
+    font-size: clamp(2.4rem, 6.4vw, 4.6rem);
+  }
+  .d-h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.04;
+    font-size: clamp(1.9rem, 4.2vw, 3rem);
+  }
+  .d-h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-size: 1.25rem;
+  }
+  .d-eyebrow {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--d-muted);
+  }
+  .d-card {
+    background: var(--d-surface);
+    border: 1px solid var(--d-edge);
+    border-radius: 1rem;
+  }
+  .d-field {
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 0.7rem;
+    border: 1.5px solid var(--d-edge);
+    background: var(--d-surface);
+    font: inherit;
+    color: var(--d-ink);
+  }
+  .d-field::placeholder {
+    color: color-mix(in oklab, var(--d-muted) 70%, white);
+  }
+  .d-field:focus {
+    border-color: var(--d-brand);
+    outline: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.001s !important;
+  }
+}

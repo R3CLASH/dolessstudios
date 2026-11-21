@@ -111,6 +111,13 @@ One-time setup:
      them, with a warning, but briefs and newsletter sign-ups can't reach you until they're set.
    - optional: variable `CONTACT_FROM_EMAIL`; secret `DATABASE_URL` (Neon, Supabase or any Postgres; migrations run
      on deploy; without it briefs and sign-ups are only emailed).
+   - optional, for instant checkout: secrets `DODO_API_KEY` and `DODO_WEBHOOK_KEY`, plus variable
+     `DODO_ENVIRONMENT` (`test_mode` or `live_mode`; defaults to `test_mode`). Without the keys both
+     workflows still succeed, with a warning, and every CTA routes to the quote form. `live_mode` with
+     either key missing fails the run on purpose. Note the keys are read by **both** workflows: Infra
+     puts them on the Lambda, Deploy needs the API key at build time because the buy button is baked
+     into the prerendered HTML. The `dodoProductId` values in `content.ts` have to be filled in too,
+     so switching payments on is a redeploy, not an env change.
 3. Run **Infra** → *Run workflow* on `main`. Read the plan in the run summary; the apply follows it.
 4. Push to `main` (or run **Deploy** by hand) to put the real code on the Lambdas. The run summary shows the site URL.
 

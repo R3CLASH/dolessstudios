@@ -24,9 +24,10 @@ export type NavItem = { href: string; label: string; note: string; key: string }
 export const NAV: NavItem[] = [
   { href: "/", label: "Home", note: "start over", key: "1" },
   { href: "/services", label: "Services", note: "the stuff we build", key: "2" },
-  { href: "/work", label: "Work", note: "proof we do the work", key: "3" },
-  { href: "/about", label: "About", note: "why lazy is a method", key: "4" },
-  { href: "/contact", label: "Contact", note: "hand us something boring", key: "5" },
+  { href: "/off-the-shelf", label: "Off the shelf", note: "sites that already exist", key: "3" },
+  { href: "/work", label: "Work", note: "proof we do the work", key: "4" },
+  { href: "/about", label: "About", note: "why lazy is a method", key: "5" },
+  { href: "/contact", label: "Contact", note: "hand us something boring", key: "6" },
 ];
 
 export type ServiceSlug = "web" | "shopify" | "wordpress" | "web-apps" | "automation";
@@ -188,6 +189,360 @@ export const SERVICES: Service[] = [
 ];
 
 export const getService = (slug: string) => SERVICES.find((s) => s.slug === slug);
+
+/* ── Off the shelf ──────────────────────────────────────────────────────────
+   Prebuilt websites per vertical, sold at a fixed price and built done-for-you.
+   Money is always integer minor units of USD — see src/lib/money.ts.
+   Anything in [square brackets] is a placeholder to replace before launch. */
+
+export type SolutionSlug = "trades" | "restaurant" | "clinic" | "startup";
+
+/** What a solution does. Drives the catalog filter pills, not the verticals. */
+export type SolutionTag = "leads" | "bookings" | "payments" | "menu" | "ai";
+
+export const SOLUTION_TAGS: { id: SolutionTag; label: string }[] = [
+  { id: "leads", label: "Catches leads" },
+  { id: "bookings", label: "Takes bookings" },
+  { id: "payments", label: "Takes payments" },
+  { id: "menu", label: "Menu / price list" },
+  { id: "ai", label: "AI add-ons ready" },
+];
+
+export type Solution = {
+  slug: SolutionSlug;
+  index: string;
+  /** Market label, used in chips, nav and metadata. */
+  vertical: string;
+  /** Product name. */
+  title: string;
+  /** One line for the card. */
+  tagline: string;
+  /** Two sentences for the hero and the meta description. */
+  intro: string;
+  forWho: string[];
+  tags: SolutionTag[];
+  /** Pages you get, in order. */
+  pages: string[];
+  /** Functional features, rendered in the numbered grid. */
+  features: string[];
+  /** Fed to <AutoChecklist>, same shape as Service.offYourPlate. */
+  offYourPlate: string[];
+  turnaround: string;
+  /** As-is price in minor units of BASE_CURRENCY. */
+  priceCents: number;
+  /** Dodo dashboard product per environment: test and live ids differ. null = checkout off. */
+  dodoProductId: { test: string | null; live: string | null };
+  /**
+   * The live, clickable demo. null until one is built, in which case the page
+   * falls back to placeholder art.
+   * `path` is a route in this app (see src/app/(demos)); `host` is the fake
+   * domain shown in the browser frame's URL bar.
+   */
+  demo: { path: string; host: string } | null;
+  accent: string;
+  /** Which bespoke services this maps to, for cross-links and lead tagging. */
+  services: ServiceSlug[];
+  stack: string[];
+  faq: { q: string; a: string }[];
+};
+
+export const SOLUTIONS: Solution[] = [
+  {
+    slug: "trades",
+    index: "01",
+    vertical: "Trades & services",
+    title: "The Callout",
+    tagline: "Turns a phone search into a booked job.",
+    intro:
+      "Built for people who are up a ladder when the phone rings. Services, the areas you cover, proof you turn up, and a quote form that lands in your inbox instead of getting lost in WhatsApp.",
+    forWho: ["Electricians", "Plumbers", "Cleaners", "Landscapers", "AC & repair", "Movers"],
+    tags: ["leads", "ai"],
+    pages: ["Home", "Services", "Service areas", "About & the team", "Reviews", "Get a quote", "Thanks"],
+    features: [
+      "Quote form that emails you and saves every lead",
+      "Click-to-call and WhatsApp on every screen",
+      "Service-area list built for local search",
+      "Before and after gallery",
+      "Google Reviews on the page",
+      "Fast on 3G, because your customers are outside",
+    ],
+    offYourPlate: [
+      "Typing the same quote into WhatsApp ten times",
+      "Losing a job because you missed one call",
+      "Explaining which areas you cover",
+      "Paying a directory to list you",
+    ],
+    turnaround: "Live in 5 working days",
+    priceCents: 24_900,
+    dodoProductId: { test: null, live: null },
+    demo: { path: "/demo/trades", host: "voltelectric.lk" },
+    accent: "#ff5a1f",
+    services: ["web", "automation"],
+    stack: ["Next.js", "Tailwind", "WhatsApp", "Google Business", "Resend"],
+    faq: [
+      {
+        q: "I work alone. Is this overkill?",
+        a: "It's the opposite. One person with no office needs the site to answer the questions you'd otherwise answer by phone at 7pm.",
+      },
+      {
+        q: "Can it stop the time-wasters?",
+        a: "Partly. The quote form asks for the job, the address and a photo, so you can price it before you drive anywhere.",
+      },
+    ],
+  },
+  {
+    slug: "restaurant",
+    index: "02",
+    vertical: "Food & salons",
+    title: "The Table",
+    tagline: "The menu, the hours and the address, found in one tap.",
+    intro:
+      "Most people check your page for three things: are you open, where are you, and what does it cost. This puts all three above the fold and keeps the menu editable without a developer.",
+    forWho: ["Restaurants", "Cafes", "Bakeries", "Salons", "Barbers", "Spas"],
+    tags: ["menu", "bookings", "leads"],
+    pages: ["Home", "Menu or price list", "Gallery", "About", "Find us & hours", "Book a table", "Thanks"],
+    features: [
+      "Menu or price list you can edit yourself",
+      "Opening hours that show open or closed right now",
+      "Map, directions and one-tap calling",
+      "Photo gallery that stays fast",
+      "Reservation or booking request form",
+      "Links out to delivery apps you already use",
+    ],
+    offYourPlate: [
+      "Re-uploading a PDF menu every price change",
+      "Answering \"are you open?\" on Instagram",
+      "Paying commission on every delivery order",
+      "Explaining where to park",
+    ],
+    turnaround: "Live in 5 working days",
+    priceCents: 24_900,
+    dodoProductId: { test: null, live: null },
+    demo: { path: "/demo/restaurant", host: "kolambakitchen.lk" },
+    accent: "#c8f04a",
+    services: ["web"],
+    stack: ["Next.js", "Tailwind", "Sanity", "Google Maps", "Resend"],
+    faq: [
+      {
+        q: "Can I change prices myself?",
+        a: "Yes. The menu lives in a simple editor built around your items, not a page builder you have to learn.",
+      },
+      {
+        q: "Do you do online ordering?",
+        a: "As an add-on. Menu to cart to kitchen, on your own site, so you stop paying commission per order.",
+      },
+    ],
+  },
+  {
+    slug: "clinic",
+    index: "03",
+    vertical: "Clinics & practices",
+    title: "The Practice",
+    tagline: "Credibility first, appointment second.",
+    intro:
+      "For the practices where people check you out before they trust you. Treatments and what they cost, the people who do them, your policies in plain language, and an appointment request that reaches the front desk.",
+    forWho: ["Dentists", "Physios", "Clinics", "Law firms", "Accountants", "Consultants"],
+    tags: ["bookings", "leads", "ai"],
+    pages: ["Home", "Treatments or services", "The team", "Fees & insurance", "Policies", "Request an appointment", "Thanks"],
+    features: [
+      "One page per treatment, written for patients not peers",
+      "Team profiles with credentials and registrations",
+      "Fees and what insurance covers, stated openly",
+      "Appointment request with the details you need up front",
+      "Policy and consent pages that are easy to keep current",
+      "Accessible to WCAG AA, because your audience needs it",
+    ],
+    offYourPlate: [
+      "Reading out the same fees on every call",
+      "Taking appointment details by phone, twice",
+      "Explaining what the insurance covers",
+      "Chasing a web developer to fix one date",
+    ],
+    turnaround: "Live in 7 working days",
+    priceCents: 34_900,
+    dodoProductId: { test: null, live: null },
+    demo: { path: "/demo/clinic", host: "serendibdental.lk" },
+    accent: "#2fb5a0",
+    services: ["web", "automation"],
+    stack: ["Next.js", "Tailwind", "Sanity", "Cal.com", "Resend"],
+    faq: [
+      {
+        q: "Is it compliant?",
+        a: "The structure is: accessible markup, a policy and consent page, no tracking without consent. The wording of your own policies has to come from you or your regulator.",
+      },
+      {
+        q: "Can patients book directly?",
+        a: "The as-is build takes an appointment request your desk confirms. Real calendar booking with live slots is an add-on.",
+      },
+    ],
+  },
+  {
+    slug: "startup",
+    index: "04",
+    vertical: "Startups & SaaS",
+    title: "The Launch",
+    tagline: "One page that explains it and collects the email.",
+    intro:
+      "For the week you need to be live and have nothing to show but a clear idea. Hero, the problem, how you solve it, pricing, and a signup that works before the product does.",
+    forWho: ["Pre-launch SaaS", "Side projects", "Agencies", "Indie apps", "Waitlists", "Pitch pages"],
+    tags: ["leads", "payments", "ai"],
+    pages: ["Hero & problem", "How it works", "Features", "Pricing", "FAQ", "Waitlist or signup", "Thanks"],
+    features: [
+      "Pricing table built from your plans",
+      "Waitlist capture that stores every signup",
+      "Open Graph cards so links look right when shared",
+      "Analytics and conversion goals wired up",
+      "Scores green on Core Web Vitals out of the box",
+      "Ready for a payment link the day you have something to sell",
+    ],
+    offYourPlate: [
+      "Wrestling a page builder at 1am",
+      "Paying monthly for a landing-page tool",
+      "Wondering why the link preview is blank",
+      "Rebuilding the page when the pitch changes",
+    ],
+    turnaround: "Live in 3 working days",
+    priceCents: 19_900,
+    dodoProductId: { test: null, live: null },
+    demo: { path: "/demo/startup", host: "sheetfast.io" },
+    accent: "#7b6cf6",
+    services: ["web", "web-apps"],
+    stack: ["Next.js", "Tailwind", "TypeScript", "Resend", "Vercel"],
+    faq: [
+      {
+        q: "Can it grow into the real product?",
+        a: "Yes. It's a normal Next.js codebase in your repository, so the app can be built on top of it rather than beside it.",
+      },
+      {
+        q: "I don't have the copy yet.",
+        a: "Add the copywriting pack. You answer a short set of questions and we write the page.",
+      },
+    ],
+  },
+];
+
+/**
+ * The three things we need from a buyer before we can build, whichever solution
+ * they bought. Shown on every detail page and again on the thanks page, which is
+ * the start of delivery rather than just a receipt.
+ */
+export const SOLUTION_WE_NEED = [
+  "Your logo, or the branding pack",
+  "A few photos of the real thing",
+  "Access to your domain",
+];
+
+export const getSolution = (slug: string) => SOLUTIONS.find((s) => s.slug === slug);
+export const SOLUTION_SLUGS = SOLUTIONS.map((s) => s.slug) as [SolutionSlug, ...SolutionSlug[]];
+
+export type AddOnGroup = "brand" | "pages" | "integrations" | "ai";
+
+export const ADDON_GROUPS: { id: AddOnGroup; label: string; line: string }[] = [
+  { id: "brand", label: "Branding & words", line: "If you don't have a logo or the copy yet." },
+  { id: "pages", label: "Extra pages", line: "More of the site, same build." },
+  { id: "integrations", label: "Integrations", line: "Wire it to the tools you already pay for." },
+  { id: "ai", label: "AI add-ons", line: "The bits that answer for you." },
+];
+
+export type AddOn = {
+  /** Stable id, stored on the lead row. Don't rename these once they're in the database. */
+  id: string;
+  group: AddOnGroup;
+  name: string;
+  line: string;
+  /** One-off price in minor units of BASE_CURRENCY. */
+  priceCents: number;
+  /** Monthly price in minor units, for the add-ons that keep running. */
+  monthlyCents?: number;
+  /** Caveat shown under the name. */
+  note?: string;
+  /** When set, only offered on these solutions. Absent = offered on all of them. */
+  only?: SolutionSlug[];
+};
+
+export const ADD_ONS: AddOn[] = [
+  { id: "brand-logo", group: "brand", name: "Logo & brand kit", line: "Logo, colours, type, and the files to use them anywhere.", priceCents: 12_000 },
+  { id: "brand-copy", group: "brand", name: "Copywriting", line: "We write every page. You answer a few questions.", priceCents: 9_500 },
+  { id: "brand-photos", group: "brand", name: "Photo sourcing", line: "Licensed photos chosen and cut to fit your site.", priceCents: 4_500 },
+
+  { id: "pages-extra", group: "pages", name: "Extra page", line: "Any page beyond the ones included. Priced per page.", priceCents: 4_500 },
+  { id: "pages-blog", group: "pages", name: "Blog or news section", line: "Listing, post template, and a CMS to post from.", priceCents: 9_000 },
+  { id: "pages-multilang", group: "pages", name: "Second language", line: "Sinhala, Tamil or anything else, fully switchable.", priceCents: 11_000 },
+
+  { id: "int-booking", group: "integrations", name: "Online booking", line: "Real calendar, real slots, confirmations by email.", priceCents: 14_000 },
+  { id: "int-payments", group: "integrations", name: "Take payments", line: "Deposits or full payment, on your own site.", priceCents: 13_000, note: "Gateway fees are the provider's, not ours." },
+  { id: "int-whatsapp", group: "integrations", name: "WhatsApp handoff", line: "Forms and buttons that open a pre-filled chat.", priceCents: 3_500 },
+  { id: "int-crm", group: "integrations", name: "CRM or sheet sync", line: "Every lead lands where your team already works.", priceCents: 6_000 },
+  { id: "int-reviews", group: "integrations", name: "Google Reviews", line: "Live reviews on the page, no copy and paste.", priceCents: 3_500, note: "Needs a Google Business profile." },
+  { id: "int-analytics", group: "integrations", name: "Analytics & goals", line: "GA4, plus the three numbers that actually matter.", priceCents: 3_000 },
+  { id: "int-ordering", group: "integrations", name: "Online ordering", line: "Menu to cart to kitchen, no commission.", priceCents: 19_000, only: ["restaurant"] },
+
+  { id: "ai-chatbot", group: "ai", name: "AI site chatbot", line: "Answers from your own pages, around the clock.", priceCents: 16_000, monthlyCents: 2_500 },
+  { id: "ai-receptionist", group: "ai", name: "AI receptionist", line: "Picks up when you can't, books the job, texts you.", priceCents: 29_000, monthlyCents: 5_900 },
+  { id: "ai-quoting", group: "ai", name: "AI quoting assistant", line: "Turns a description into a priced quote for you to approve.", priceCents: 24_000, monthlyCents: 4_500 },
+];
+
+export const getAddOn = (id: string) => ADD_ONS.find((a) => a.id === id);
+export const addOnsFor = (slug: SolutionSlug) => ADD_ONS.filter((a) => !a.only || a.only.includes(slug));
+export const ADD_ON_IDS = ADD_ONS.map((a) => a.id) as [string, ...string[]];
+
+/** Pay, send us the bits, we build, keys over. Same shape as PROCESS. */
+export const SOLUTION_STEPS = [
+  {
+    n: "01",
+    title: "Pick & pay",
+    body: "Buy it as-is online, or tick the changes you want and we send a fixed quote first. No call needed either way.",
+  },
+  {
+    n: "02",
+    title: "Send the bits",
+    body: "One short form: your logo, a few photos, your words, and access to your domain. Missing some? Add the branding pack.",
+  },
+  {
+    n: "03",
+    title: "We build it",
+    body: "Your content, your colours, your domain. You get a preview link to pick at before anything goes live.",
+  },
+  {
+    n: "04",
+    title: "Keys over",
+    body: "It goes live in your accounts, with a walkthrough video and 14 days of fixes. After that it's yours, with or without us.",
+  },
+];
+
+/** Every build includes these, whichever one you pick. */
+export const SOLUTION_INCLUDED = [
+  "Your domain, connected properly",
+  "Your logo and colours through the whole site",
+  "Analytics and a form that actually delivers",
+  "A walkthrough video, so you can edit it yourself",
+  "14 days of fixes after launch",
+  "Every account in your name, not ours",
+];
+
+/** Shared questions, merged with each solution's own on the detail page. */
+export const SOLUTION_FAQ = [
+  {
+    q: "Is this a template everyone else has?",
+    a: "The structure is prebuilt. The brand, the words and the content are yours. We don't sell a template as custom work, which is exactly why this page has prices on it.",
+  },
+  {
+    q: "What do you need from me?",
+    a: "Your logo, a few photos, your words, and access to your domain. If you don't have the logo or the words yet, add the branding pack and we'll make them.",
+  },
+  {
+    q: "Who owns it at the end?",
+    a: "You do. It's built in your accounts, on your domain, in a repository you own, and handed over with everything you need to run it without us.",
+  },
+  {
+    q: "What if I want something that isn't listed?",
+    a: "Then it's a bespoke project, not an off-the-shelf one. Tell us what you need and we'll quote it properly instead of pretending it fits.",
+  },
+  {
+    q: "Are there monthly fees?",
+    a: "Not from us on the as-is build. A few add-ons cost monthly because something has to keep running; where that's true, the monthly price is shown next to it.",
+  },
+];
 
 export type Project = {
   slug: string;
@@ -668,3 +1023,289 @@ export const PRINCIPLES = [
 ];
 
 export const WONT_DO = ["Endless status meetings", "Hourly billing surprises", "Locking you into our accounts", "Templates sold as custom", "Ten tools where one will do"];
+
+/* ── Legal pages ──────────────────────────────────────────────────────────────
+ * Terms, privacy and refunds. These exist because a payment processor's business
+ * review requires them to be publicly visible alongside public pricing, but they
+ * are also just what anyone buying a build is entitled to read first.
+ *
+ * Written to describe what the code actually does: the contact form really does
+ * email over SMTP and write to Postgres, there really is no analytics or tracking
+ * of any kind, and the fonts really are self-hosted. If the app's behaviour
+ * changes, this copy has to change with it.
+ */
+
+export type LegalSection = { heading: string; body: string[] };
+
+export type LegalPage = {
+  slug: "terms" | "privacy" | "refund-policy";
+  /** Footer link text. Kept short; the bottom bar is a single line. */
+  label: string;
+  title: string;
+  heavy: string;
+  light: string;
+  intro: string;
+  /** Shown on the page so a reader can tell how current it is. */
+  updated: string;
+  sections: LegalSection[];
+};
+
+const LEGAL_UPDATED = "20 November 2026";
+
+export const LEGAL: LegalPage[] = [
+  {
+    slug: "terms",
+    label: "Terms",
+    title: "Terms of Service",
+    heavy: "Terms",
+    light: "in plain language.",
+    intro: `The agreement between you and ${SITE.name} when you buy a build or hire us for a project.`,
+    updated: LEGAL_UPDATED,
+    sections: [
+      {
+        heading: "Who you are dealing with",
+        body: [
+          `${SITE.name} is a development and automation studio based in ${SITE.location}. You can reach us at ${SITE.email}, and that address is the right one for anything in these terms.`,
+          `"We" and "us" mean ${SITE.name}. "You" means the person or business buying the work. "The work" means whatever we have agreed to build — a website, a store, an app, an automation, or a prebuilt site set up on your domain.`,
+        ],
+      },
+      {
+        heading: "How work is agreed",
+        body: [
+          "Bespoke projects start from a written scope and a fixed price. Nothing begins until you have accepted that scope in writing, and the price we quote covers what is in it — not what is added later.",
+          "Fixed-price prebuilt sites are different: the price, the pages and what is included are published on the site before you buy, so buying one is your acceptance of that scope as written. Anything beyond it is a separate quote.",
+          "If we think something you have asked for is a bad idea, we will say so and suggest the alternative. The decision is still yours.",
+        ],
+      },
+      {
+        heading: "What we need from you",
+        body: [
+          "Every build needs three things from you: your logo or branding, a few real photographs, and access to your domain. We cannot start until we have them.",
+          "If those have not arrived within 30 days of purchase, we will hold your slot and keep chasing, but we cannot guarantee the original turnaround. We will not cancel your order or keep your money without telling you.",
+          "You are responsible for the accuracy of the content you send us and for having the right to use it. If you send us a photograph you do not have a licence for, that is on you.",
+        ],
+      },
+      {
+        heading: "Turnaround and delivery",
+        body: [
+          "Turnaround is quoted in working days and is counted from the day we have everything in the section above, not from the day you paid. Sri Lankan public holidays and weekends do not count.",
+          "Delivery means the work is live on your domain and handed over to you. For prebuilt sites it also means we have set it up with your brand and content, because these are done-for-you builds and not files you download.",
+          "A fixed-price build includes one round of revisions on the content and branding we have put in. Structural changes, extra pages and new features are quoted separately.",
+        ],
+      },
+      {
+        heading: "Prices, payment and tax",
+        body: [
+          "Published prices are in US dollars and are the full price of the work. Any rupee figure shown next to a price is an approximate conversion for your convenience only, and nothing is ever charged at it.",
+          "Payments are processed by Dodo Payments, which acts as merchant of record for the sale. Your card details are handled entirely by them and never reach us or our servers. Dodo issues the receipt for your purchase, and that receipt rather than anything on our site is the tax document for it.",
+          "Any tax Dodo is required to collect in your country is added at checkout and shown before you pay. Third-party costs — domain registration, paid plugins, app subscriptions, hosting beyond what we set up — are billed to you by those providers and are not included unless the scope says so.",
+        ],
+      },
+      {
+        heading: "Who owns what",
+        body: [
+          "You own your brand, your content and your domain throughout. Nothing you give us becomes ours.",
+          "Once the work is paid for in full, the site we built for you is yours to keep, change, move or hand to another developer. We do not hold your site hostage and we do not keep your accounts in our name.",
+          "We keep the right to describe the work and show it in our own portfolio, including screenshots of the finished site. If you would rather we did not, tell us and we will not.",
+          "Anything we built before your project, and any internal tool we reuse across clients, stays ours.",
+        ],
+      },
+      {
+        heading: "Cancellation and refunds",
+        body: [
+          "Both are covered in the Refund and Cancellation Policy, which forms part of these terms.",
+        ],
+      },
+      {
+        heading: "Third-party services",
+        body: [
+          "Builds usually sit on services neither of us controls — hosting, a domain registrar, a payment processor, an email provider, whatever apps the project needs. We will set them up sensibly and in your name wherever we can, but we cannot be responsible for their outages, price changes or policy decisions.",
+        ],
+      },
+      {
+        heading: "What we are responsible for",
+        body: [
+          "We will do the work with reasonable skill and care, and we will fix our own mistakes. For 30 days after delivery, anything that is broken because of how we built it we fix at no charge.",
+          "We are not responsible for losses beyond the work itself: lost revenue, lost data you had no backup of, or the consequences of a third-party service failing. Where we are liable, our total liability is limited to the amount you paid us for the work in question.",
+          "Nothing here limits liability that cannot legally be limited.",
+        ],
+      },
+      {
+        heading: "Ending the arrangement",
+        body: [
+          "Either of us can walk away from an ongoing project in writing. If you do, you pay for the work done up to that point. If we do, we refund anything you have paid for work not yet done.",
+          "We may decline or stop work on anything illegal, deceptive, or built to harm people. We will tell you why and refund the unstarted part.",
+        ],
+      },
+      {
+        heading: "Governing law",
+        body: [
+          `These terms are governed by the laws of ${SITE.location}, and its courts have jurisdiction over any dispute. If something goes wrong, email us first — almost everything is solvable without lawyers.`,
+        ],
+      },
+      {
+        heading: "Changes",
+        body: [
+          "We may update these terms. The version on this page when you bought is the one that applies to your purchase, so the date above matters. Material changes will not be applied retroactively to work already agreed.",
+        ],
+      },
+    ],
+  },
+
+  {
+    slug: "privacy",
+    label: "Privacy",
+    title: "Privacy Policy",
+    heavy: "Privacy,",
+    light: "the short version.",
+    intro:
+      "What this site collects, which is very little, and what happens to it. No analytics, no advertising, no tracking cookies.",
+    updated: LEGAL_UPDATED,
+    sections: [
+      {
+        heading: "The short version",
+        body: [
+          "This site has no analytics, no advertising, no tracking pixels and no third-party scripts. We do not profile you, we do not sell anything about you, and nobody is paying us for your attention.",
+          "We hold what you type into a form, and what a payment processor tells us about a purchase. That is the whole of it.",
+        ],
+      },
+      {
+        heading: "What we collect, and when",
+        body: [
+          "When you send a brief through the contact page, we receive what you filled in: your name, email address, company if you gave one, your budget and timeline if you selected them, which services you are interested in, and your message. If you configured a prebuilt site, we also receive which site and which add-ons you chose.",
+          "When you sign up to the newsletter, we store your email address and nothing else.",
+          "When you buy something, Dodo Payments processes the payment and tells us your name, email address, what you bought, the payment reference and the amount charged. We never receive or store your card number, and it never touches our servers.",
+          "Our server keeps ordinary request logs, which include your IP address. We also use your IP address in memory, briefly, to rate-limit form submissions so the forms cannot be used to spam us. It is not stored for that purpose and is not linked to your submission.",
+        ],
+      },
+      {
+        heading: "Cookies, or the lack of them",
+        body: [
+          "This site sets no cookies and runs no cookie banner, because there is nothing to consent to.",
+          'Two small values are kept in your browser\'s session storage to stop the site being annoying: one records that you have already seen the opening animation, and one remembers which pages you have visited so the menu can mark them. Both are visible only to your own browser, are never sent to us, and are erased when you close the tab.',
+          "Our fonts are served from this site rather than from a font network, so loading a page does not tell anyone else that you were here.",
+        ],
+      },
+      {
+        heading: "Why we hold it",
+        body: [
+          "To reply to you and to quote on work, which is the reason you contacted us.",
+          "To deliver and support something you bought, which we need in order to perform the agreement.",
+          "To send the newsletter, which happens only because you asked for it and stops the moment you say so.",
+          "To keep the site from being abused, which is the rate limiting above.",
+        ],
+      },
+      {
+        heading: "Who else sees it",
+        body: [
+          "Only the services we need to run the business, and only what they need:",
+          "Amazon Web Services hosts the site, in the United States. Our email provider carries the messages the forms generate. Our database provider stores the briefs and newsletter sign-ups. Dodo Payments processes payments and is the merchant of record for purchases, under its own privacy policy.",
+          "Because our hosting and payment processing are outside Sri Lanka, your information is transferred and processed abroad, including in the United States.",
+          "We do not sell your information, we do not share it for advertising, and we do not hand it to anyone else unless the law genuinely requires it.",
+        ],
+      },
+      {
+        heading: "How long we keep it",
+        body: [
+          "Briefs and enquiries we keep while there is any chance of working together, and then for as long as we need a record of the project. Order records we keep as long as we are required to for tax and accounting. Newsletter addresses we keep until you unsubscribe. Server logs rotate on their own in a matter of weeks.",
+        ],
+      },
+      {
+        heading: "What you can ask for",
+        body: [
+          `Email ${SITE.email} and you can ask us for a copy of what we hold about you, ask us to correct it, ask us to delete it, or tell us to stop emailing you. We will do it, and we will not make you explain why.`,
+          "Deleting an order record may be limited by the records we are legally required to keep, and the receipt for a purchase belongs to Dodo Payments rather than to us.",
+        ],
+      },
+      {
+        heading: "Children",
+        body: [
+          "This is a business-to-business studio site. It is not aimed at children and we do not knowingly collect anything from them.",
+        ],
+      },
+      {
+        heading: "Changes",
+        body: [
+          "If this changes, the date above changes with it. If a change is significant and we hold your email address, we will tell you rather than quietly editing the page.",
+        ],
+      },
+    ],
+  },
+
+  {
+    slug: "refund-policy",
+    label: "Refunds",
+    title: "Refund & Cancellation Policy",
+    heavy: "Refunds",
+    light: "and cancellations.",
+    intro:
+      "When you can get your money back, when you cannot, and exactly how to ask. Written for a service that starts the moment you pay.",
+    updated: LEGAL_UPDATED,
+    sections: [
+      {
+        heading: "What this covers",
+        body: [
+          "Every purchase made through this site, including fixed-price prebuilt sites and deposits on bespoke projects.",
+          "These are done-for-you builds, not downloads. You are buying our time and a build slot, which is why the timing of your request matters so much to what we can refund.",
+        ],
+      },
+      {
+        heading: "Before we start: a full refund",
+        body: [
+          "If you change your mind before we have begun work, you get all of it back, no questions and no restocking fee. Just email us.",
+          "In practice that means within 48 hours of buying, or any time before we tell you the build has started — whichever is later. We will always confirm by email when work begins, so you are never guessing.",
+        ],
+      },
+      {
+        heading: "Once the build is under way: a partial refund",
+        body: [
+          "After we have started, we refund what we have not yet done. We will tell you plainly what has been built, what that was worth, and what is coming back to you.",
+          "If we have barely begun, expect most of it back. If the site is nearly finished, expect little. We would rather finish the work or fix what you dislike, and that option stays open.",
+        ],
+      },
+      {
+        heading: "After delivery",
+        body: [
+          "Once the build is live on your domain and handed over, the work is done and it is not refundable — you have it.",
+          "What you do get is 30 days of fixes: anything broken because of how we built it, we repair at no charge. That is a warranty on our work, not a trial period, and it does not cover changes of mind or new features.",
+        ],
+      },
+      {
+        heading: "If we are the problem",
+        body: [
+          "If we cannot deliver what was agreed, or we miss the turnaround by our own fault and you no longer want it, you get a full refund. That holds even after work has started.",
+          "If we have to decline a project after taking your money, we refund the part we have not done and say why.",
+        ],
+      },
+      {
+        heading: "What we cannot refund",
+        body: [
+          "Money that has already left for somebody else: domain registrations, paid plugins or themes, app subscriptions, stock photography, and any third-party service bought for your project. Those are the provider's to refund, under their rules, and we will help you ask.",
+          "Work you cancelled after it was completed and accepted.",
+        ],
+      },
+      {
+        heading: "How to ask",
+        body: [
+          `Email ${SITE.email} with the email address you used and the payment reference from your receipt. That is all we need to find the order.`,
+          "We will reply within two working days with what we can refund and why. If we agree a refund, we submit it straight away.",
+        ],
+      },
+      {
+        heading: "How the money comes back",
+        body: [
+          "Dodo Payments is the merchant of record for your purchase, so the refund is issued by them, to the card or method you originally paid with. We cannot send it anywhere else.",
+          "Once submitted it typically takes 5 to 10 working days to appear, depending on your bank. If you paid in a currency other than US dollars, your bank's exchange rate on the day of the refund may differ from the day you paid, and that difference is not something either we or Dodo control.",
+        ],
+      },
+      {
+        heading: "Please ask us before your bank",
+        body: [
+          "If something has gone wrong, email us first. A chargeback takes months, freezes the conversation, and we will almost always have sorted it out by return of email. We have never refused a refund that was fair.",
+        ],
+      },
+    ],
+  },
+];
+
+export const getLegalPage = (slug: LegalPage["slug"]) => LEGAL.find((p) => p.slug === slug)!;

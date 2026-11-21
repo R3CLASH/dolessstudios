@@ -4,7 +4,10 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { fieldErrors, readInquiry } from "@/lib/inquiry";
-import { sendInquiryEmail, sendSubscriberEmail } from "@/lib/mail";
+import { readSolutionInquiry } from "@/lib/solutionInquiry";
+import { getAddOn, getSolution, type AddOn } from "@/lib/content";
+import { formatMoney, sumCents } from "@/lib/money";
+import { sendInquiryEmail, sendSolutionInquiryEmail, sendSubscriberEmail } from "@/lib/mail";
 
 export type FormState = {
   ok: boolean;
@@ -73,6 +76,68 @@ export async function submitInquiry(_prev: FormState, formData: FormData): Promi
     return { ok: false, message: "Something broke on our side and your brief didn't send. Please try again in a minute." };
   }
   return { ok: true, message: "Added to our to-do list.", name: d.name.split(" ")[0] };
+}
+
+/**
+ * A quote request from an off-the-shelf page. Same hardening as the brief:
+ * honeypot, rate limit, and "the email reaching us or the row landing counts".
+ *
+ * Every total is recomputed here from the catalog. The numbers the configurator
+ * showed are display only and are never trusted.
+ */
+export async function submitSolutionInquiry(_prev: FormState, formData: FormData): Promise<FormState> {
+  // Honeypot: real people never fill this.
+  if (String(formData.get("website") ?? "").length > 0) {
+    return { ok: true, message: "Thanks!" };
+  }
+
+  const parsed = readSolutionInquiry(formData);
+  if (!parsed.success) {
+    return { ok: false, message: "A couple of things need a look.", errors: fieldErrors(parsed.error) };
+  }
+
+  // Counted after validation so fixing a typo doesn't use up an attempt.
+  if (limited(`sol:${await clientIp()}`)) {
+    return { ok: false, message: "That's a lot of quotes. Give it a few minutes and try again." };
+  }
+
+  const d = parsed.data;
+  const solution = getSolution(d.solution);
+  // The schema already restricts this to a real slug; this is belt and braces.
+  if (!solution) return { ok: false, message: "We couldn't find that one. Try reloading the page." };
+
+  const addOns = d.addons.map(getAddOn).filter((a): a is AddOn => Boolean(a));
+  const oneOff = solution.priceCents + sumCents(addOns.map((a) => a.priceCents));
+  const monthly = sumCents(addOns.map((a) => a.monthlyCents));
+
+  let stored = false;
+  const db = getDb();
+  if (db) {
+    try {
+      await db.insert(schema.inquiries).values({
+        name: d.name,
+        email: d.email,
+        company: d.company || null,
+        // The bespoke services this maps to, so existing reports still classify the lead.
+        services: solution.services,
+        solution: d.solution,
+        addons: d.addons,
+        budget: `${formatMoney(oneOff)} one-off${monthly ? ` + ${formatMoney(monthly)}/mo` : ""} (est.)`,
+        timeline: d.timeline || null,
+        message: d.message || `[no message] ${solution.title}, ${d.addons.length} add-ons`,
+        source: `off-the-shelf:${d.solution}`,
+      });
+      stored = true;
+    } catch (err) {
+      console.error("[off-the-shelf] insert failed", err);
+    }
+  }
+  const emailed = await sendSolutionInquiryEmail(d, { solution, addOns, oneOff, monthly });
+
+  if (!emailed && !stored) {
+    return { ok: false, message: "Something broke on our side and your request didn't send. Please try again in a minute." };
+  }
+  return { ok: true, message: "We'll send a fixed quote, usually the same day.", name: d.name.split(" ")[0] };
 }
 
 const emailSchema = z.email();

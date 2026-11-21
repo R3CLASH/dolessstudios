@@ -59,6 +59,9 @@ jobs:
       TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
       TF_VAR_contact_from_email: ${{ vars.CONTACT_FROM_EMAIL }}
       TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+      TF_VAR_dodo_api_key: ${{ secrets.DODO_API_KEY }}
+      TF_VAR_dodo_webhook_key: ${{ secrets.DODO_WEBHOOK_KEY }}
+      TF_VAR_dodo_environment: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
     steps:
       # The deploy role trusts refs/heads/main and the production environment, nothing else. This job
       # has no environment, so off main it dies inside the AWS login with an opaque STS error instead.
@@ -79,6 +82,15 @@ jobs:
           fi
           if [ -z "$TF_VAR_smtp_user" ] || [ -z "$TF_VAR_smtp_pass" ]; then
             echo "::warning::SMTP_USER (variable) or SMTP_PASS (secret) isn't set, so the contact form can't email briefs and will tell visitors it didn't send."
+          fi
+          if [ -z "$TF_VAR_dodo_api_key" ] || [ -z "$TF_VAR_dodo_webhook_key" ]; then
+            echo "::warning::DODO_API_KEY or DODO_WEBHOOK_KEY isn't set, so the buy buttons stay hidden and every CTA routes to the quote form."
+          fi
+          # Refused rather than warned: a live_mode function with no key would take a card click and
+          # answer 503, and the webhook would drop real events instead of making Dodo retry.
+          if [ "$TF_VAR_dodo_environment" = "live_mode" ] && { [ -z "$TF_VAR_dodo_api_key" ] || [ -z "$TF_VAR_dodo_webhook_key" ]; }; then
+            echo "::error::DODO_ENVIRONMENT is live_mode but DODO_API_KEY or DODO_WEBHOOK_KEY isn't visible to this job. Set both secrets on the 'production' environment before switching the mode."
+            exit 1
           fi
           case "$AWS_ROLE_ARN" in
             */doless-gha-deploy) ;;
@@ -130,6 +142,9 @@ jobs:
       TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
       TF_VAR_contact_from_email: ${{ vars.CONTACT_FROM_EMAIL }}
       TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+      TF_VAR_dodo_api_key: ${{ secrets.DODO_API_KEY }}
+      TF_VAR_dodo_webhook_key: ${{ secrets.DODO_WEBHOOK_KEY }}
+      TF_VAR_dodo_environment: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
     steps:
       - uses: actions/checkout@v4
 
