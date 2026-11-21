@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { ADDON_GROUPS, type AddOn, type SolutionSlug } from "@/lib/content";
 import { formatMoney, formatUsdApprox, sumCents } from "@/lib/money";
 import { SolutionQuoteForm } from "./SolutionQuoteForm";
@@ -156,18 +157,19 @@ export function SolutionConfigurator({ slug, title, priceCents, turnaround, addO
               {asIs && checkoutHref ? (
                 <>
                   {/*
-                    A plain <a> with data-no-transition: /checkout is a route handler,
-                    and PageTransition would otherwise client-push into it and break.
+                    A real page now, not the /checkout route handler, so the
+                    PageTransition curtain should run — hence no data-no-transition.
+                    checkoutHref still decides whether this renders at all: no Dodo
+                    key or no product id for the mode means the quote form instead.
                   */}
-                  <a
-                    href={checkoutHref}
-                    data-no-transition
+                  <Link
+                    href={`/off-the-shelf/${slug}/buy`}
                     rel="nofollow"
                     data-cursor="Buy"
                     className="btn btn-accent h-16 justify-center px-8 text-lg"
                   >
                     Buy it as-is · {formatMoney(priceCents)} →
-                  </a>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => setAsking(true)}

@@ -192,7 +192,7 @@ export const getService = (slug: string) => SERVICES.find((s) => s.slug === slug
 
 /* ── Off the shelf ──────────────────────────────────────────────────────────
    Prebuilt websites per vertical, sold at a fixed price and built done-for-you.
-   Money is always integer minor units of USD — see src/lib/money.ts.
+   Money is always integer minor units of LKR — see src/lib/money.ts.
    Anything in [square brackets] is a placeholder to replace before launch. */
 
 export type SolutionSlug = "trades" | "restaurant" | "clinic" | "startup";

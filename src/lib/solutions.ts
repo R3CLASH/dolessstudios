@@ -20,5 +20,8 @@ import { dodoKey, productIdFor } from "@/lib/dodo";
 export function checkoutHrefFor(solution: Solution): string | null {
   const id = productIdFor(solution);
   if (!dodoKey() || !id) return null;
-  return `/checkout?productId=${encodeURIComponent(id)}&metadata_solution=${encodeURIComponent(solution.slug)}`;
+  // No metadata_solution here on purpose: /checkout discards the caller's query
+  // and re-derives the slug from its own catalog lookup, so passing one only
+  // reads as if it mattered.
+  return `/checkout?productId=${encodeURIComponent(id)}`;
 }

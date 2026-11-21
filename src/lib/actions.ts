@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { fieldErrors, readInquiry } from "@/lib/inquiry";
@@ -8,6 +7,7 @@ import { readSolutionInquiry } from "@/lib/solutionInquiry";
 import { getAddOn, getSolution, type AddOn } from "@/lib/content";
 import { formatMoney, sumCents } from "@/lib/money";
 import { sendInquiryEmail, sendSolutionInquiryEmail, sendSubscriberEmail } from "@/lib/mail";
+import { clientIp, limited } from "@/lib/ratelimit";
 
 export type FormState = {
   ok: boolean;
@@ -15,22 +15,6 @@ export type FormState = {
   errors?: Record<string, string>;
   name?: string;
 };
-
-// Very small in-memory rate limit per IP (per server instance).
-const hits = new Map<string, number[]>();
-function limited(ip: string, max = 5, windowMs = 10 * 60 * 1000) {
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < windowMs);
-  recent.push(now);
-  hits.set(ip, recent);
-  return recent.length > max;
-}
-
-async function clientIp() {
-  const h = await headers();
-  // x-viewer-ip is set by CloudFront (infra/cdn.tf) and can't be spoofed through it; x-forwarded-for can.
-  return h.get("x-viewer-ip") || h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
-}
 
 export async function submitInquiry(_prev: FormState, formData: FormData): Promise<FormState> {
   // Honeypot: real people never fill this.

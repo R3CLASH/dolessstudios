@@ -52,6 +52,13 @@ export const orders = pgTable(
      * slot and a second pair of emails.
      */
     paymentId: text("payment_id").notNull().unique(),
+    /**
+     * The human-readable reference, "DLS-7AQ9V59X". Derived from paymentId by
+     * orderReference(), so it is stored for lookup rather than for safekeeping —
+     * it can always be recomputed. Nullable because a row written before this
+     * column existed has none, and because nothing in this module may throw.
+     */
+    reference: text("reference").unique(),
     /** A SolutionSlug. Loose text like inquiries.solution — validated in app code, not the DB. */
     solution: text("solution"),
     productId: text("product_id"),
@@ -74,6 +81,7 @@ export const orders = pgTable(
     index("orders_created_at_idx").on(t.createdAt),
     index("orders_status_idx").on(t.status),
     index("orders_email_idx").on(t.email),
+    index("orders_reference_idx").on(t.reference),
   ],
 );
 

@@ -94,7 +94,8 @@ export default async function SolutionPage({ params }: { params: Promise<{ slug:
             <span className="chip">{solution.turnaround}</span>
           </div>
           <p className="max-w-xl text-sm text-mist">
-            Billed in USD. Pay in rupees at checkout if you like — your card does the conversion.
+            Priced and charged in Sri Lankan rupees. An overseas card is converted at checkout at Dodo&apos;s rate,
+            shown before you confirm, and any tax due where you live is added there too.
           </p>
         </div>
       </PageHero>
