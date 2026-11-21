@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { SOLUTIONS, SOLUTION_TAGS, type SolutionTag } from "@/lib/content";
-import { formatLkrApprox, formatMoney } from "@/lib/money";
+import { formatMoney, formatUsdApprox } from "@/lib/money";
 import { gsap, prefersReducedMotion, useIsoLayoutEffect } from "@/lib/gsap";
 import { SolutionArt } from "./SolutionArt";
 
@@ -56,7 +56,7 @@ export function SolutionGrid() {
         })}
       </div>
 
-      <ul ref={grid} className="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <ul ref={grid} className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-start">
         {list.map((s, i) => (
           <li key={s.slug} data-card className={i % 2 === 1 ? "md:mt-24" : ""}>
             <article className="group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-line bg-ink-2 transition-colors duration-500 hover:border-paper/30">
@@ -84,7 +84,7 @@ export function SolutionGrid() {
 
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-line pt-5">
                   <span className="display heavy text-3xl tabular-nums">{formatMoney(s.priceCents)}</span>
-                  <span className="font-mono text-xs text-mist">{formatLkrApprox(s.priceCents)}</span>
+                  <span className="font-mono text-xs text-mist">{formatUsdApprox(s.priceCents)}</span>
                   <span className="chip ml-auto">{s.turnaround}</span>
                 </div>
 
