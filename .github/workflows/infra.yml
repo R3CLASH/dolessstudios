@@ -62,6 +62,7 @@ jobs:
       TF_VAR_dodo_api_key: ${{ secrets.DODO_API_KEY }}
       TF_VAR_dodo_webhook_key: ${{ secrets.DODO_WEBHOOK_KEY }}
       TF_VAR_dodo_environment: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
+      TF_VAR_dodo_test_product_id: ${{ vars.DODO_TEST_PRODUCT_ID }}
     steps:
       # The deploy role trusts refs/heads/main and the production environment, nothing else. This job
       # has no environment, so off main it dies inside the AWS login with an opaque STS error instead.
@@ -145,6 +146,7 @@ jobs:
       TF_VAR_dodo_api_key: ${{ secrets.DODO_API_KEY }}
       TF_VAR_dodo_webhook_key: ${{ secrets.DODO_WEBHOOK_KEY }}
       TF_VAR_dodo_environment: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
+      TF_VAR_dodo_test_product_id: ${{ vars.DODO_TEST_PRODUCT_ID }}
     steps:
       - uses: actions/checkout@v4
 
