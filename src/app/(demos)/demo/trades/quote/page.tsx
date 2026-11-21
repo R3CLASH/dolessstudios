@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { VOLT } from "@/lib/demo/trades";
 import { QuoteFormDemo } from "@/components/demo/trades/QuoteFormDemo";
-import { Stars } from "@/components/demo/trades/Stars";
+import { Stars } from "@/components/demo/Stars";
 
 export const metadata: Metadata = {
   title: "Get a free quote",

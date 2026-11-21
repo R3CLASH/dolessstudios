@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SITE, SOLUTIONS, SOLUTION_FAQ, SOLUTION_WE_NEED, addOnsFor, getSolution } from "@/lib/content";
 import { BASE_CURRENCY, formatMoney, formatUsdApprox } from "@/lib/money";
-import { checkoutHrefFor } from "@/lib/solutions";
+import { assertLiveCatalogSellable, checkoutHrefFor } from "@/lib/solutions";
 import { PageHero } from "@/components/sections/PageHero";
 import { SolutionArt } from "@/components/solutions/SolutionArt";
 import { SolutionDemo } from "@/components/solutions/SolutionDemo";
@@ -15,6 +15,9 @@ import { BigCta } from "@/components/sections/BigCta";
 import { Eyebrow, Reveal } from "@/components/ui/motion";
 
 export function generateStaticParams() {
+  // Build-time only, which is the whole reason it lives here: a live_mode build
+  // whose catalog is only half sellable is stopped rather than deployed.
+  assertLiveCatalogSellable(SOLUTIONS);
   return SOLUTIONS.map((s) => ({ slug: s.slug }));
 }
 

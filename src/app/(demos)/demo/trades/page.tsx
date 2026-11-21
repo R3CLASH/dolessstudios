@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AREAS, FAQ, REVIEWS, SERVICES, VOLT, WORK } from "@/lib/demo/trades";
-import { Stars } from "@/components/demo/trades/Stars";
+import { Stars } from "@/components/demo/Stars";
 
 export default function VoltHome() {
   return (

@@ -51,7 +51,8 @@ drizzle/                  SQL migrations
 
 ## Buying off the shelf
 
-Four prebuilt sites with public fixed prices. Tick no add-ons and you can buy one outright; tick
+Six prebuilt sites with public fixed prices, one per vertical that is buildable and sellable in
+Sri Lanka. Tick no add-ons and you can buy one outright; tick
 any and it routes to a quote form instead. The money path:
 
 ```
@@ -155,7 +156,10 @@ One-time setup:
      either key missing fails the run on purpose. Note the keys are read by **both** workflows: Infra
      puts them on the Lambda, Deploy needs the API key at build time because the buy button is baked
      into the prerendered HTML. The `dodoProductId` values in `content.ts` have to be filled in too,
-     so switching payments on is a redeploy, not an env change.
+     so switching payments on is a redeploy, not an env change. In `live_mode` a solution with no
+     product id **fails the build** rather than quietly routing that one page to the quote form while
+     the rest take cards — `assertLiveCatalogSellable()` in `src/lib/solutions.ts`. Test mode only
+     warns. See HANDOFF §3.2 for the per-product price table.
 3. Run **Infra** → *Run workflow* on `main`. Read the plan in the run summary; the apply follows it.
 4. Push to `main` (or run **Deploy** by hand) to put the real code on the Lambdas. The run summary shows the site URL.
 

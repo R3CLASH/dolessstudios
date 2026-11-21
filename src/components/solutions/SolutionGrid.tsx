@@ -8,9 +8,9 @@ import { gsap, prefersReducedMotion, useIsoLayoutEffect } from "@/lib/gsap";
 import { SolutionArt } from "./SolutionArt";
 
 /**
- * Filtered by what a solution does, not by vertical: with four verticals the
- * pills would be one per card and tell you nothing. Tags keep working as the
- * catalog grows.
+ * Filtered by what a solution does, not by vertical: one pill per vertical
+ * would be one pill per card and tell you nothing. Tags keep working as the
+ * catalog grows, which it has.
  */
 const FILTERS: { id: "all" | SolutionTag; label: string }[] = [
   { id: "all", label: "Everything" },

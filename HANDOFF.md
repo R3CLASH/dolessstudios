@@ -26,7 +26,7 @@ branch runs `ci.yml` (`npm ci && typecheck && build`, no secrets set) and deploy
 Do Less Studios previously sold bespoke work only: a client arrives with requirements, we scope and
 quote. Revenue was gated on inbound enquiries and every sale started from zero.
 
-**Off the shelf** adds a second way to buy: four prebuilt websites with public fixed prices, a live
+**Off the shelf** adds a second way to buy: six prebuilt websites with public fixed prices, a live
 clickable demo each, and an itemised list of paid customisations. Tick no add-ons and you can buy the
 site as-is; tick any and it routes to a quote form.
 
@@ -35,15 +35,46 @@ Decisions already made (do not re-litigate — the user chose these):
 | | |
 |---|---|
 | Route | `/off-the-shelf`, `/off-the-shelf/[slug]` |
-| Verticals | trades · restaurant/salon · clinic · startup/SaaS |
+| Verticals | trades · restaurant/salon · clinic · hotel/villa · classes/institute · exporter/maker |
 | Delivery | **done-for-you** — we deploy on their domain and hand over. Payment buys a build slot, not a download |
-| Prices | LKR 89,990 / 89,990 / 119,990 / 69,990, paid in full up front, and that is what the site now shows as the price. The dollar figures beside them (≈ $271 / $271 / $361 / $211) are derived at `LKR_PER_USD` and drift with the rate, so they are always rendered behind a `≈` and never used anywhere binding. See the header comment in `src/lib/money.ts`. |
+| Prices | LKR 89,990 / 89,990 / 119,990 / 129,990 / 79,990 / 139,990, paid in full up front, and that is what the site now shows as the price. The dollar figures beside them are derived at `LKR_PER_USD` and drift with the rate, so they are always rendered behind a `≈` and never used anywhere binding. See the header comment in `src/lib/money.ts`. |
 | Buy flow | **hybrid** — 0 add-ons → instant checkout; 1+ → quote form |
 | Payments | **Dodo Payments**, not Stripe |
 | Currency | **LKR base** — `BASE_CURRENCY`, every `priceCents` in the catalog, and what Dodo charges. An overseas card is converted *from* the rupee price by Adaptive Currency at Dodo's own rate, shown to the buyer before they confirm. Payouts still settle to us in USD. |
 | Hosting/domain | deliberately off the public page; settled in conversation |
 
 The original plan is at `~/.claude/plans/we-built-doless-recently-dreamy-tiger.md`.
+
+### 1.1 The catalog was refocused on Sri Lanka (2026-11-21)
+
+The site sells into Sri Lanka, so every prebuilt had to be one we can actually *deliver* here.
+Audited against that, three of the original four held and one did not.
+
+**Retired: The Launch** (startups & SaaS, LKR 69,990, `/demo/startup`, demo host `sheetfast.io`).
+Its audience was written for Western indie hackers — "pre-launch SaaS", "side projects", Core Web
+Vitals, "wrestling a page builder at 1am" — it was the cheapest and thinnest-margin product on the
+shelf, and SaaS founders are the segment most likely to build their own landing page. Both its sales
+page and its demo were live and prerendered, so `next.config.ts` now 308s `/off-the-shelf/startup`
+and `/demo/startup/*` to `/off-the-shelf` rather than letting them 404.
+
+**Added**, each chosen because the whole build is static pages, a form and WhatsApp — no geo-blocked
+dependency, nothing needing a TRCSL filing:
+
+| | Why this vertical |
+|---|---|
+| **The Stay** (LKR 129,990) | Booking sites take 15–20% of the rate. A direct-booking enquiry site pays for itself in one or two bookings, and the buyer earns in USD/EUR, which is why it carries the top price. Enquiry-only on purpose: live inventory is on the honest-limits list. |
+| **The Class** (LKR 79,990) | Tuition is one of the largest informal industries in the country, and its timetables and fees currently live in WhatsApp groups. Replaces The Launch as the cheap, fast entry product with a far better-fitting buyer. The Sinhala/Tamil add-on sells itself here. |
+| **The Supplier** (LKR 139,990) | Tea, spice, apparel and gem exporters are judged by foreign buyers on a website from 2011. Lowest price sensitivity of the six, and it takes over The Launch's "credibility to an outside audience" slot while actually being a Sri Lankan business. |
+
+One add-on was added with them: `int-catalogue` (Catalogue download, LKR 24,990, `only: ["supplier"]`).
+
+**Copy that hard-coded "four" is now derived** from `SOLUTION_COUNT` / `SOLUTION_COUNT_WORD` in
+`src/lib/content.ts`, and the catalog aside's shortest turnaround is computed from `SOLUTIONS`
+rather than typed. The count had already drifted once; it should not drift again.
+
+**Still open:** the three new solutions have `dodoProductId: { test: null, live: null }`, so they
+route to the quote form in every mode until products exist for them in the Dodo dashboard. See §3.2
+step 1.
 
 ---
 
@@ -60,14 +91,16 @@ The original plan is at `~/.claude/plans/we-built-doless-recently-dreamy-tiger.m
 - Nav, footer, ⌘K, page transitions, sitemap, robots, JSON-LD (`Service` + `Offer`)
 - `src/components/ui/form.tsx` — `Chip`/`Err`/`field` extracted and shared with `BriefForm`
 
-**Demos.** Four live, clickable demo sites, three pages each, embedded on the sales pages.
+**Demos.** Six live, clickable demo sites, three pages each, embedded on the sales pages.
 
 | Solution | Demo | Business | Pages |
 |---|---|---|---|
 | The Callout | `/demo/trades` | Volt Electric (electrician) | home · areas · quote |
 | The Table | `/demo/restaurant` | Kolamba Kitchen (restaurant) | home · menu · booking |
 | The Practice | `/demo/clinic` | Serendib Dental (dentist) | home · treatments & fees · appointment |
-| The Launch | `/demo/startup` | Sheetfast (pre-launch SaaS) | home · pricing · waitlist |
+| The Stay | `/demo/stay` | Palm House (Galle Fort villa) | home · rooms & rates · enquire |
+| The Class | `/demo/classes` | Vidura Institute (A/L tuition) | home · timetable · register |
+| The Supplier | `/demo/supplier` | Ceylon Leaf Exports (tea exporter) | home · products · quote |
 
 Verified: clean `npm run build` with **no** `DODO_*`, `DATABASE_URL` or SMTP set; clean `npm run typecheck`;
 all 22 routes 200; 22 schema/validation checks passed (including forged add-on ids rejected and the
@@ -138,8 +171,23 @@ swapped — the capability flag in `src/lib/solutions.ts` is the only integratio
 
 The code is in place and dormant. To switch it on:
 
-1. **Create 4 products per mode (8 total)** in the Dodo dashboard, **LKR**, Adaptive Currency on, and
-   paste the ids into the `dodoProductId` slots in `src/lib/content.ts` (lines ~277, 320, 363, 406).
+1. **Create 6 products per mode (12 total)** in the Dodo dashboard, **LKR**, Adaptive Currency on, and
+   paste the ids into the `dodoProductId` slots in `src/lib/content.ts` — one per entry in `SOLUTIONS`.
+   The price on the Dodo product must equal `priceCents` **exactly**; the rupee figure on the page is
+   the price, and a mismatch means the buyer is charged something the site never quoted.
+
+   | Slug | Product | Price (LKR) | `priceCents` | Test id today |
+   |---|---|---|---|---|
+   | `trades` | The Callout | 89,990 | `8_999_000` | ✅ exists |
+   | `restaurant` | The Table | 89,990 | `8_999_000` | ✅ exists |
+   | `clinic` | The Practice | 119,990 | `11_999_000` | ✅ exists |
+   | `stay` | The Stay | 129,990 | `12_999_000` | ❌ create |
+   | `classes` | The Class | 79,990 | `7_999_000` | ❌ create |
+   | `supplier` | The Supplier | 139,990 | `13_999_000` | ❌ create |
+
+   So the outstanding work is **3 new test products and all 6 live products**. A `null` id is not a
+   bug in test mode — that solution routes to the quote form while the others can be bought — but in
+   **live mode it is now a build failure**, see below.
 2. **Register the webhook** at `https://<site>/api/webhook/dodo-payments`, **separately in test and
    live**, each with its own signing key. Subscribe to **only** `payment.succeeded`,
    `payment.failed` and `refund.succeeded` — the adaptor validates against a closed schema and
@@ -151,7 +199,19 @@ The code is in place and dormant. To switch it on:
    a `live_mode` run with an empty key, on purpose.
 4. **Run Infra (apply), then Deploy — in that order.** Not optional, and not one step; see traps #13
    and #15. Infra puts the keys on the Lambda; Deploy bakes the button into the HTML.
-5. **Do not deploy `CustomerPortal`** — the adaptor's portal handler does not authenticate callers
+5. **A live_mode build refuses a half-sellable catalog.** `assertLiveCatalogSellable()` in
+   `src/lib/solutions.ts`, called from `generateStaticParams()` in `/off-the-shelf/[slug]`, fails the
+   build when `DODO_PAYMENTS_ENVIRONMENT=live_mode` and any solution has no live product id. Unkeyed
+   is a no-op, so CI with no secrets still builds; test mode prints which solutions will route to the
+   quote form and carries on. It lives in `generateStaticParams` deliberately — that runs only at
+   build, so it can never 500 a page at request time when the Lambda's environment differs from the
+   one the bundle was built with (traps #13 and #15).
+
+   Measured: unkeyed → exit 0, silent. test_mode with 3 ids missing → exit 0 plus
+   `[dodo] test_mode: no product id for stay, classes, supplier`. live_mode with ids missing → exit
+   **1**, naming every slug. live_mode with all 6 filled → exit 0, 63 pages.
+
+6. **Do not deploy `CustomerPortal`** — the adaptor's portal handler does not authenticate callers
    and there are no user accounts here.
 
 #### What the original plan got wrong, found while building it

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DELIVERY, MENU, REVIEWS, TABLE } from "@/lib/demo/restaurant";
 import { OpenStatus } from "@/components/demo/restaurant/OpenStatus";
-import { Stars } from "@/components/demo/trades/Stars";
+import { Stars } from "@/components/demo/Stars";
 
 /** A few dishes worth putting on the front page. */
 const PICKS = [MENU[1].dishes[2], MENU[2].dishes[1], MENU[2].dishes[4], MENU[3].dishes[3]];
