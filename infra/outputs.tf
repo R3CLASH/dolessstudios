@@ -15,6 +15,15 @@ output "api_endpoint" {
   value = aws_apigatewayv2_api.site.api_endpoint
 }
 
+# Whether a database was provisioned at all. Deliberately a bool and not the URL:
+# the connection URI is an ephemeral value, and an output referencing one fails
+# with "Ephemeral value not allowed". Read the URL from SSM instead --
+# aws ssm get-parameter --name /doless/database-url --with-decryption
+output "database_configured" {
+  description = "false means /admin shows its no-database state and briefs are only emailed."
+  value       = local.neon_enabled
+}
+
 # ── The contract with .github/workflows/deploy.yml ───────────────────────────
 # That workflow deploys code only and never runs Terraform, so it can't use the outputs above.
 # It reads this one parameter instead: a single JSON document, so it can't be observed half-written

@@ -32,7 +32,9 @@ jobs:
       AWS_REGION: us-east-1
       NEXT_TELEMETRY_DISABLED: "1"
       SSM_PARAMETER: /doless/deploy-targets
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # The unpooled URI, for drizzle-kit. Written by terraform apply (infra/database.tf);
+      # this workflow still never runs Terraform, it just reads what Infra published.
+      SSM_DATABASE_PARAMETER: /doless/database-url-direct
     steps:
       # Fails in seconds, by name, instead of deep inside the AWS login.
       - name: Check deploy configuration
@@ -120,6 +122,24 @@ jobs:
       # Before the new code goes live, so its pages never point at files that aren't there yet.
       - name: Upload build output
         run: infra/upload.sh "$SITE_BUCKET"
+
+      # Terraform owns this value now rather than a hand-managed GitHub secret. An
+      # absent parameter means no database is configured, which leaves DATABASE_URL
+      # empty and skips the migration step below -- the same coherent "no database"
+      # state the app degrades to locally.
+      #
+      # `set -o pipefail` without `-e`: the `if` has to be allowed to catch a
+      # missing parameter instead of killing the job.
+      - name: Read database URL
+        run: |
+          set -o pipefail
+          if url=$(aws ssm get-parameter --name "$SSM_DATABASE_PARAMETER" \
+                     --with-decryption --query Parameter.Value --output text 2>/dev/null); then
+            echo "::add-mask::$url"
+            echo "DATABASE_URL=$url" >> "$GITHUB_ENV"
+          else
+            echo "::notice::$SSM_DATABASE_PARAMETER not found, so there is no database; skipping migrations."
+          fi
 
       # Ahead of the code update on purpose: old code against the new schema is the safe direction.
       # The corollary is that migrations must stay backwards-compatible with the running code —
