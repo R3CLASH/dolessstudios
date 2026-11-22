@@ -31,16 +31,20 @@ resource "neon_project" "main" {
   database_name = "doless"
   database_user = "doless"
 
-  # The free plan allows one day. Set explicitly so a later plan upgrade cannot
-  # silently change the retention window underneath us.
-  history_retention_seconds = 86400
+  # 6 hours. This is the Free plan's ceiling -- the provider's own "default: 1 day"
+  # is the PAID default, and asking a Free project for 86400 is asking for more
+  # history than the plan allows. Raise this to 86400 on a paid plan.
+  history_retention_seconds = 21600
 
   primary_compute = {
+    # Free allows up to 2 CU; this stays well inside it.
     autoscaling_limit_min_cu = 0.25
     autoscaling_limit_max_cu = 1
-    # Scale to zero after five idle minutes. The first query after that pays
-    # roughly 500ms of cold start, which an internal dashboard can afford.
-    suspend_timeout_seconds = 300
+    # 0 means "take the plan default", which is the only correct value on Free:
+    # scale-to-zero there is fixed at 5 minutes and cannot be turned off or
+    # retimed. Setting an explicit timeout is a paid-plan feature. The first
+    # query after a suspend pays roughly 500ms, which a dashboard can afford.
+    suspend_timeout_seconds = 0
   }
 }
 
