@@ -58,7 +58,7 @@ jobs:
       TF_VAR_smtp_user: ${{ vars.SMTP_USER }}
       TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
       TF_VAR_contact_from_email: ${{ vars.CONTACT_FROM_EMAIL }}
-      TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+      TF_VAR_neon_api_key: ${{ secrets.NEON_API_KEY }}
       TF_VAR_dodo_api_key: ${{ secrets.DODO_API_KEY }}
       TF_VAR_dodo_webhook_key: ${{ secrets.DODO_WEBHOOK_KEY }}
       TF_VAR_dodo_environment: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}
@@ -101,6 +101,9 @@ jobs:
           fi
           if [ -z "$TF_VAR_order_link_secret" ]; then
             echo "::warning::ORDER_LINK_SECRET isn't set, so order confirmation emails omit the buyer's order link and /orders/<ref> 404s."
+          fi
+          if [ -z "$TF_VAR_neon_api_key" ]; then
+            echo "::warning::NEON_API_KEY isn't set, so no database is provisioned, DATABASE_URL stays off the Lambda, and /admin shows its no-database state."
           fi
           # Refused rather than warned: a live_mode function with no key would take a card click and
           # answer 503, and the webhook would drop real events instead of making Dodo retry.
@@ -157,7 +160,7 @@ jobs:
       TF_VAR_smtp_user: ${{ vars.SMTP_USER }}
       TF_VAR_smtp_pass: ${{ secrets.SMTP_PASS }}
       TF_VAR_contact_from_email: ${{ vars.CONTACT_FROM_EMAIL }}
-      TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+      TF_VAR_neon_api_key: ${{ secrets.NEON_API_KEY }}
       TF_VAR_dodo_api_key: ${{ secrets.DODO_API_KEY }}
       TF_VAR_dodo_webhook_key: ${{ secrets.DODO_WEBHOOK_KEY }}
       TF_VAR_dodo_environment: ${{ vars.DODO_ENVIRONMENT || 'test_mode' }}

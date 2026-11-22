@@ -28,7 +28,10 @@ locals {
       SMTP_USER          = var.smtp_user
       SMTP_PASS          = var.smtp_pass
       CONTACT_FROM_EMAIL = var.contact_from_email
-      DATABASE_URL       = var.database_url
+      # Terraform owns this now: the Neon project in database.tf -> a SecureString
+      # parameter -> read back through a data source, because this block cannot take
+      # an ephemeral value. Unset when no Neon key is configured.
+      DATABASE_URL = local.neon_enabled ? data.aws_ssm_parameter.database_url[0].value : ""
       # /admin's whole auth. Absent means the admin area 404s, which is the
       # same thing it does locally with the variable unset.
       ADMIN_PASSWORD = var.admin_password

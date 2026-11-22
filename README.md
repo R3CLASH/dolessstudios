@@ -159,8 +159,11 @@ One-time setup:
    - variable `AWS_ROLE_ARN` = the role ARN the script printed
    - variable `SMTP_USER` and secret `SMTP_PASS` (the Gmail address and its App Password). The deploy runs without
      them, with a warning, but briefs and newsletter sign-ups can't reach you until they're set.
-   - optional: variable `CONTACT_FROM_EMAIL`; secret `DATABASE_URL` (Neon, Supabase or any Postgres; migrations run
-     on deploy; without it briefs and sign-ups are only emailed).
+   - optional: variable `CONTACT_FROM_EMAIL`; secret `NEON_API_KEY` (console.neon.tech → Account settings →
+     API keys). Terraform provisions the database itself from that one key — `infra/database.tf` creates a Neon
+     project and publishes its connection URL to SSM, so there is no `DATABASE_URL` secret to manage and nothing
+     to paste by hand. Migrations still run on deploy. Without the key no database is created, briefs and
+     sign-ups are only emailed, and `/admin` shows its no-database state.
    - optional, for instant checkout: secrets `DODO_API_KEY` and `DODO_WEBHOOK_KEY`, plus variable
      `DODO_ENVIRONMENT` (`test_mode` or `live_mode`; defaults to `test_mode`). Without the keys both
      workflows still succeed, with a warning, and every CTA routes to the quote form. `live_mode` with
@@ -205,7 +208,37 @@ aws cloudfront create-invalidation --distribution-id <id> --paths "/*"
 
 Migrations are **not** covered by that: `drizzle-kit` is forward-only, so a migration must stay
 backwards-compatible with the code it may be rolled back to. `deploy.yml` runs migrations *before* updating the
-Lambda code for the same reason — old code against the new schema is the safe direction.
+Lambda code for the same reason — old code against the new schema is the safe direction. It reads the connection
+URL from SSM (`/doless/database-url-direct`, written by `terraform apply`) rather than from a secret, and skips
+the step entirely when that parameter does not exist.
+
+## The database
+
+`infra/database.tf` provisions a [Neon](https://neon.com) serverless Postgres and is the only place the
+production credential exists. Two things make Neon rather than RDS the right fit here: the server Lambda is
+deliberately **not** in a VPC, and migrations run from a GitHub runner. A private RDS would need a NAT gateway
+for the Lambda's outbound Dodo and SMTP calls *and* a VPC-attached migration runner; Neon is a public TLS
+endpoint that scales to zero, so both paths work unchanged and the free plan costs nothing.
+
+Terraform writes two SecureString parameters, because the two consumers want different endpoints:
+
+| Parameter | Endpoint | Read by |
+| --- | --- | --- |
+| `/doless/database-url` | pooled (pgbouncer) | the server Lambda, as `DATABASE_URL` (`infra/lambda.tf`) |
+| `/doless/database-url-direct` | direct | `deploy.yml`, for `npm run db:migrate` |
+
+The pooled endpoint suits a Lambda's many short-lived invocations, and `src/db/index.ts` already sets
+`prepare: false`, which pgbouncer requires. Migrations take the direct one because DDL belongs on a session
+connection. Rotate the credential by bumping `value_wo_version` in `infra/database.tf` and applying Infra — no
+code change, no redeploy.
+
+Note that the connection URLs are an *ephemeral* resource in the Neon provider, not attributes of the project.
+An ephemeral value may only be passed to a write-only argument, which is why both parameters use `value_wo`,
+why there is no Terraform output carrying the URL, and why the Lambda reads its copy back through a data source
+instead of taking the value directly. The provider is also pinned to an exact prerelease (`0.19.0-beta.4`): it
+has no stable release yet, and Terraform only installs a prerelease when the version is pinned exactly.
+
+Local development is unaffected — `docker compose up -d` and `DATABASE_URL` in `.env`, as above.
 
 The custom domain is **not** a GitHub variable — it lives in `infra/variables.tf`, so it is visible in review:
 `domain_name` (the root domain) and `acm_certificate_arn`. The distribution serves the apex and `www`, and

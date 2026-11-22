@@ -65,8 +65,11 @@ variable "contact_from_email" {
   sensitive   = true
 }
 
-variable "database_url" {
-  description = "Optional Postgres URL for a copy of briefs and newsletter sign-ups. Both are emailed either way."
+# The database itself is provisioned here now -- see infra/database.tf. There is no
+# database_url variable any more: Terraform derives the connection URL from the Neon
+# project it creates and publishes it to SSM, so this key is the only input.
+variable "neon_api_key" {
+  description = "Optional Neon API key. Empty provisions no database, leaves DATABASE_URL off the Lambda, and /admin falls back to its no-database state. Create one at console.neon.tech -> Account settings -> API keys."
   type        = string
   default     = ""
   sensitive   = true

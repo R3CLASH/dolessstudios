@@ -12,7 +12,7 @@
 # Local runs: AWS_PROFILE=thavisha terraform -chdir=infra plan
 
 terraform {
-  required_version = ">= 1.10"
+  required_version = ">= 1.11" # value_wo on aws_ssm_parameter is a write-only argument
 
   required_providers {
     aws = {
@@ -22,6 +22,14 @@ terraform {
     archive = {
       source  = "hashicorp/archive"
       version = "~> 2.6"
+    }
+    neon = {
+      source = "neondatabase/neon"
+      # Exact pin, not a range, for two reasons: Terraform only installs a
+      # prerelease when the version is pinned exactly, and this provider has no
+      # stable release at all yet (see infra/database.tf). Never `init -upgrade`
+      # this unattended -- CI runs a plain `init`, which is what Neon advises.
+      version = "0.19.0-beta.4"
     }
   }
 
@@ -44,6 +52,13 @@ provider "aws" {
       ManagedBy   = "terraform"
     }
   }
+}
+
+# An empty api_key is fine here as long as no Neon resource is instantiated, which
+# is exactly what local.neon_enabled guarantees -- so `terraform validate` on the
+# credential-less PR job keeps working.
+provider "neon" {
+  api_key = var.neon_api_key
 }
 
 data "aws_caller_identity" "current" {}
