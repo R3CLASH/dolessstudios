@@ -970,7 +970,7 @@ export const SHOWCASE: ShowcaseSite[] = [
     url: "https://web-production-828036a0.up.railway.app/",
     kind: "Video & photo studio · NZ",
     accent: "#22B8CF",
-    image: "/work/creative-works.webp",
+    image: "/work/creative-works-hero.webp",
   },
   {
     title: "Checklist.lk",
