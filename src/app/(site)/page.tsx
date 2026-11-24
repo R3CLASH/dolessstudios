@@ -3,7 +3,6 @@ import { Manifesto } from "@/components/home/Manifesto";
 import { ServicesRail } from "@/components/home/ServicesRail";
 import { BeforeAfter } from "@/components/home/BeforeAfter";
 import { Process } from "@/components/home/Process";
-import { SelectedWork } from "@/components/home/SelectedWork";
 import { SiteWheel } from "@/components/home/SiteWheel";
 import { StackMarquee } from "@/components/home/StackMarquee";
 import { AppShowcase } from "@/components/sections/AppShowcase";
@@ -31,10 +30,9 @@ export default function HomePage() {
       <ServicesRail />
       <BeforeAfter />
       <Process />
-      <SelectedWork />
       <AppShowcase
         projects={PROJECTS.filter((p) => p.tags.includes("shopify") && p.image)}
-        index="07"
+        index="06"
         eyebrow="Our Shopify apps"
         title={
           <>
@@ -44,7 +42,7 @@ export default function HomePage() {
         intro="Besides client work, we build and run our own Shopify apps. Same review process, same Polaris rules, same merchants. It keeps us sharp for yours."
       />
       <StackMarquee />
-      <Faq items={FAQ} index="08" />
+      <Faq items={FAQ} index="07" />
       <BigCta />
     </>
   );

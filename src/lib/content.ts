@@ -997,11 +997,11 @@ export const SHOWCASE: ShowcaseSite[] = [
     project: "back2fit",
   },
   {
-    title: "Fintra Finance",
-    url: "https://fintrafinance.com.au",
-    kind: "Finance broker · Australia",
-    accent: "#F5C431",
-    image: "/work/fintra-finance.webp",
+    title: "Revitalize Festival",
+    url: "https://revitalize-site-production.up.railway.app/",
+    kind: "Music festival · NZ",
+    accent: "#F2B320",
+    image: "/work/revitalize-festival.webp",
   },
   {
     title: "ThemeMerge",
